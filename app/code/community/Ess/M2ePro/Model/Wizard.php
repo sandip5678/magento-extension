@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Wizard extends Ess_M2ePro_Model_Abstract
 {
-    protected $steps = array();
+    protected $_steps = array();
 
     //########################################
 
@@ -33,7 +33,7 @@ class Ess_M2ePro_Model_Wizard extends Ess_M2ePro_Model_Abstract
      */
     public function getNick()
     {
-        return NULL;
+        return null;
     }
 
     //########################################
@@ -43,12 +43,12 @@ class Ess_M2ePro_Model_Wizard extends Ess_M2ePro_Model_Abstract
      */
     public function getSteps()
     {
-        return $this->steps;
+        return $this->_steps;
     }
 
     public function getFirstStep()
     {
-        return reset($this->steps);
+        return reset($this->_steps);
     }
 
     // ---------------------------------------
@@ -56,15 +56,15 @@ class Ess_M2ePro_Model_Wizard extends Ess_M2ePro_Model_Abstract
     public function getPrevStep()
     {
         $currentStep = Mage::helper('M2ePro/Module_Wizard')->getStep($this->getNick());
-        $prevStepIndex = array_search($currentStep, $this->steps) - 1;
-        return isset($this->steps[$prevStepIndex]) ? $this->steps[$prevStepIndex] : false;
+        $prevStepIndex = array_search($currentStep, $this->_steps) - 1;
+        return isset($this->_steps[$prevStepIndex]) ? $this->_steps[$prevStepIndex] : false;
     }
 
     public function getNextStep()
     {
         $currentStep = Mage::helper('M2ePro/Module_Wizard')->getStep($this->getNick());
-        $nextStepIndex = array_search($currentStep, $this->steps) + 1;
-        return isset($this->steps[$nextStepIndex]) ? $this->steps[$nextStepIndex] : false;
+        $nextStepIndex = array_search($currentStep, $this->_steps) + 1;
+        return isset($this->_steps[$nextStepIndex]) ? $this->_steps[$nextStepIndex] : false;
     }
 
     //########################################

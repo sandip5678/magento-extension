@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -115,7 +115,7 @@ class Ess_M2ePro_Model_Listing_Auto_Category_Group extends Ess_M2ePro_Model_Comp
      */
     public function getCategories($asObjects = false, array $filters = array())
     {
-        return $this->getRelatedSimpleItems('Listing_Auto_Category','group_id', $asObjects, $filters);
+        return $this->getRelatedSimpleItems('Listing_Auto_Category', 'group_id', $asObjects, $filters);
     }
 
     public function clearCategories()

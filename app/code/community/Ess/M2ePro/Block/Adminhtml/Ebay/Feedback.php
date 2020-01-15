@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -25,7 +25,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Feedback extends Mage_Adminhtml_Block_Widg
         // ---------------------------------------
         $accountTitle = '';
         $accountId = $this->getRequest()->getParam('account');
-        if (!is_null($accountId)) {
+        if ($accountId !== null) {
             $accountTitle = Mage::getModel('M2ePro/Account')->load((int)$accountId)->getTitle();
         }
 
@@ -41,17 +41,21 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Feedback extends Mage_Adminhtml_Block_Widg
         $this->removeButton('save');
         $this->removeButton('edit');
 
-        $this->_addButton('goto_orders', array(
+        $this->_addButton(
+            'goto_orders', array(
             'label'     => Mage::helper('M2ePro')->__('Orders'),
             'onclick'   => 'setLocation(\''.$this->getUrl('*/adminhtml_ebay_order/index').'\')',
             'class'     => 'button_link'
-        ));
+            )
+        );
 
-        $this->_addButton('goto_accounts', array(
+        $this->_addButton(
+            'goto_accounts', array(
             'label'     => Mage::helper('M2ePro')->__('Accounts'),
             'onclick'   => 'setLocation(\''.$this->getUrl('*/adminhtml_ebay_account/index').'\')',
             'class'     => 'button_link'
-        ));
+            )
+        );
         // ---------------------------------------
     }
 

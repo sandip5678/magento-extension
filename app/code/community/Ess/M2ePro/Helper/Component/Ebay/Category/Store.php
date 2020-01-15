@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -18,8 +18,7 @@ class Ess_M2ePro_Helper_Component_Ebay_Category_Store extends Mage_Core_Helper_A
         $pathData = array();
 
         while (true) {
-
-            $currentCategory = NULL;
+            $currentCategory = null;
 
             foreach ($categories as $category) {
                 if ($category['category_id'] == $categoryId) {
@@ -28,7 +27,7 @@ class Ess_M2ePro_Helper_Component_Ebay_Category_Store extends Mage_Core_Helper_A
                 }
             }
 
-            if (is_null($currentCategory)) {
+            if ($currentCategory === null) {
                 break;
             }
 
@@ -61,19 +60,22 @@ class Ess_M2ePro_Helper_Component_Ebay_Category_Store extends Mage_Core_Helper_A
         $connRead = Mage::getSingleton('core/resource')->getConnection('core_read');
 
         $etocTable = Mage::getModel('M2ePro/Ebay_Template_OtherCategory')->getResource()->getMainTable();
-        $eascTable = Mage::getSingleton('core/resource')->getTableName('m2epro_ebay_account_store_category');
+        $eascTable = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_ebay_account_store_category');
 
         // prepare category main select
         // ---------------------------------------
         $primarySelect = $connRead->select();
         $primarySelect->from(
-                array('primary_table' => $etocTable)
-            )
+            array('primary_table' => $etocTable)
+        )
             ->reset(Zend_Db_Select::COLUMNS)
-            ->columns(array(
+            ->columns(
+                array(
                 'store_category_main_id as category_id',
                 'account_id',
-            ))
+                )
+            )
             ->where('store_category_main_mode = ?', Ess_M2ePro_Model_Ebay_Template_Category::CATEGORY_MODE_EBAY)
             ->group(array('category_id', 'account_id'));
         // ---------------------------------------
@@ -82,22 +84,26 @@ class Ess_M2ePro_Helper_Component_Ebay_Category_Store extends Mage_Core_Helper_A
         // ---------------------------------------
         $secondarySelect = $connRead->select();
         $secondarySelect->from(
-                array('secondary_table' => $etocTable)
-            )
+            array('secondary_table' => $etocTable)
+        )
             ->reset(Zend_Db_Select::COLUMNS)
-            ->columns(array(
+            ->columns(
+                array(
                 'store_category_secondary_id as category_id',
                 'account_id',
-            ))
+                )
+            )
             ->where('store_category_secondary_mode = ?', Ess_M2ePro_Model_Ebay_Template_Category::CATEGORY_MODE_EBAY)
             ->group(array('category_id', 'account_id'));
         // ---------------------------------------
 
         $unionSelect = $connRead->select();
-        $unionSelect->union(array(
+        $unionSelect->union(
+            array(
             $primarySelect,
             $secondarySelect,
-        ));
+            )
+        );
 
         $mainSelect = $connRead->select();
         $mainSelect->reset()

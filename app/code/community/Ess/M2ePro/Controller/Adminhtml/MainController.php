@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -11,42 +11,32 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 {
     //########################################
 
-    public function preDispatch()
+    protected function _preDispatch()
     {
-        parent::preDispatch();
+        parent::_preDispatch();
 
         if ($this->getRequest()->isGet() &&
             !$this->getRequest()->isPost() &&
-            !$this->getRequest()->isXmlHttpRequest()) {
-
-            // check rewrite menu
-            if (count($this->getCustomViewComponentHelper()->getActiveComponents()) < 1) {
-                throw new Ess_M2ePro_Model_Exception('At least 1 channel of current View should be enabled.');
+            !$this->getRequest()->isXmlHttpRequest()
+        ) {
+            if (!Mage::helper('M2ePro/View')->getComponentHelper()->isEnabled()) {
+                return $this->_redirect(Mage::helper('M2ePro/Module_HelpCenter')->getPageRoute());
             }
 
-            // update client data
             try {
                 Mage::helper('M2ePro/Client')->updateBackupConnectionData(false);
-            } catch (Exception $exception) {}
+            } catch (Exception $exception) {
+                Mage::helper('M2ePro/Module_Exception')->process($exception);
+            }
 
-            // run servicing code
             try {
-
                 $dispatcher = Mage::getModel('M2ePro/Servicing_Dispatcher');
-                $dispatcher->process(Ess_M2ePro_Model_Servicing_Dispatcher::DEFAULT_INTERVAL,
-                                     $dispatcher->getFastTasks());
-
-            } catch (Exception $exception) {}
-        }
-
-        $maintenanceHelper = Mage::helper('M2ePro/Module_Maintenance');
-
-        if ($maintenanceHelper->isEnabled()) {
-
-            if ($maintenanceHelper->isOwner()) {
-                $maintenanceHelper->prolongRestoreDate();
-            } elseif ($maintenanceHelper->isExpired()) {
-                $maintenanceHelper->disable();
+                $dispatcher->process(
+                    Ess_M2ePro_Model_Servicing_Dispatcher::DEFAULT_INTERVAL,
+                    $dispatcher->getFastTasks()
+                );
+            } catch (Exception $exception) {
+                Mage::helper('M2ePro/Module_Exception')->process($exception);
             }
         }
 
@@ -68,7 +58,6 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         if ($this->getRequest()->isGet() &&
             !$this->getRequest()->isPost() &&
             !$this->getRequest()->isXmlHttpRequest()) {
-
             if ($this->isContentLocked()) {
                 return $this;
             }
@@ -82,7 +71,6 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         if ($this->getRequest()->isGet() &&
             !$this->getRequest()->isPost() &&
             !$this->getRequest()->isXmlHttpRequest()) {
-
             if ($this->isContentLocked()) {
                 return $this;
             }
@@ -127,117 +115,63 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         if ($this->getRequest()->isGet() &&
             !$this->getRequest()->isPost() &&
             !$this->getRequest()->isXmlHttpRequest()) {
+            $muteMessages = $this->addBrowserNotifications();
 
-            $lockNotification = $this->addLockNotifications();
-            $browserNotification = $this->addBrowserNotifications();
-            $maintenanceNotification = $this->addMaintenanceNotifications();
-
-            $muteMessages = $lockNotification || $browserNotification || $maintenanceNotification;
-
-            if (!$muteMessages && $this->getCustomViewHelper()->isInstallationWizardFinished()) {
+            if (!$muteMessages) {
                 $this->addLicenseNotifications();
             }
 
             $this->addServerNotifications();
+            $this->addServerMaintenanceInfo();
 
             if (!$muteMessages) {
-                $this->getCustomViewControllerHelper()->addMessages($this);
+                $this->getCustomViewControllerHelper()->addMessages();
+                $this->addCronErrorMessage();
             }
         }
     }
 
     // ---------------------------------------
 
-    private function addLockNotifications()
+    protected function addBrowserNotifications()
     {
-        if (Mage::helper('M2ePro/Module')->isLockedByServer()) {
+        if (Mage::helper('M2ePro/Client')->isBrowserIE()) {
             $this->_getSession()->addError(
-                Mage::helper('M2ePro')->__('M2E Pro Module is locked because of security reason. Please contact us.')
+                Mage::helper('M2ePro')->__(
+                    'We are sorry, Internet Explorer browser is not supported. Please, use'.
+                    ' another browser (Mozilla Firefox, Google Chrome, etc.).'
+                )
             );
             return true;
         }
+
         return false;
-    }
-
-    private function addBrowserNotifications()
-    {
-// M2ePro_TRANSLATIONS
-// We are sorry, Internet Explorer browser is not supported. Please, use another browser (Mozilla Firefox, Google Chrome, etc.).
-        if (Mage::helper('M2ePro/Client')->isBrowserIE()) {
-            $this->_getSession()->addError(Mage::helper('M2ePro')->__(
-                'We are sorry, Internet Explorer browser is not supported. Please, use'.
-                ' another browser (Mozilla Firefox, Google Chrome, etc.).'
-            ));
-            return true;
-        }
-        return false;
-    }
-
-    private function addMaintenanceNotifications()
-    {
-        if (!Mage::helper('M2ePro/Module_Maintenance')->isEnabled()) {
-            return false;
-        }
-
-        if (Mage::helper('M2ePro/Module_Maintenance')->isOwner()) {
-
-            $this->_getSession()->addNotice(Mage::helper('M2ePro')->__(
-                'Maintenance is Active.'
-            ));
-
-            return false;
-        }
-
-        $this->_getSession()->addError(Mage::helper('M2ePro')->__(
-            'M2E Pro is working in Maintenance Mode at the moment. Developers are investigating your issue.'
-        ).'<br/>'.Mage::helper('M2ePro')->__(
-            'You will be able to see a content of this Page soon. Please wait and then refresh a browser Page later.'
-        ));
-
-        return true;
     }
 
     // ---------------------------------------
 
-    private function addLicenseNotifications()
+    protected function addLicenseNotifications()
     {
-        $licenseMainErrorStatus = $this->addLicenseActivationNotifications() ||
-                                  $this->addLicenseValidationFailNotifications();
-
-        if ($licenseMainErrorStatus) {
-            return;
+        $added = false;
+        if (!$added && $this->getCustomViewHelper()->isInstallationWizardFinished()) {
+            $added = $this->addLicenseActivationNotifications();
         }
 
-        /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
-        $licenseHelper = Mage::helper('M2ePro/Module_License');
+        if (!$added && Mage::helper('M2ePro/Module_License')->getKey()) {
+            $added = $this->addLicenseValidationFailNotifications();
+        }
 
-        foreach ($this->getCustomViewComponentHelper()->getActiveComponents() as $component) {
-
-            if ($this->addLicenseStatusesNotifications($component)) {
-                continue;
-            }
-
-            if ($licenseHelper->isNoneMode($component)) {
-                continue;
-            }
-
-            if ($this->addLicenseExpirationDatesNotifications($component)) {
-                continue;
-            }
-
-            $this->addLicenseTrialNotifications($component);
-            $this->addLicensePreExpirationDateNotifications($component);
+        if (!$added && Mage::helper('M2ePro/Module_License')->getKey()) {
+            $added = $this->addLicenseStatusNotifications();
         }
     }
 
-    private function addServerNotifications()
+    protected function addServerNotifications()
     {
         $messages = Mage::helper('M2ePro/Module')->getServerMessages();
 
         foreach ($messages as $message) {
-
             if (isset($message['text']) && isset($message['type']) && $message['text'] != '') {
-
                 switch ($message['type']) {
                     case Ess_M2ePro_Helper_Module::SERVER_MESSAGE_TYPE_ERROR:
                         $this->_getSession()->addError(Mage::helper('M2ePro')->__($message['text']));
@@ -257,15 +191,57 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         }
     }
 
+    protected function addServerMaintenanceInfo()
+    {
+        if (Mage::helper('M2ePro/Server_Maintenance')->isNow()) {
+            $message = 'M2E Pro server is currently under the planned maintenance. The process is scheduled to last';
+            $message .= ' %from% to %to%. Please do not apply any actions during this time frame.';
+
+            $this->_getSession()->addNotice(
+                Mage::helper('M2ePro')->__(
+                    $message,
+                    Mage::helper('M2ePro/Server_Maintenance')->getDateEnabledFrom()->format('Y-m-d H:i:s'),
+                    Mage::helper('M2ePro/Server_Maintenance')->getDateEnabledTo()->format('Y-m-d H:i:s')
+                )
+            );
+        } else if (Mage::helper('M2ePro/Server_Maintenance')->isScheduled()) {
+            $message = 'The preventive server maintenance has been scheduled. The Service will be unavailable';
+            $message .= ' %from% to %to%. All product updates will processed after the technical works are finished.';
+
+            $this->_getSession()->addWarning(
+                Mage::helper('M2ePro')->__(
+                    $message,
+                    Mage::helper('M2ePro/Server_Maintenance')->getDateEnabledFrom()->format('Y-m-d H:i:s'),
+                    Mage::helper('M2ePro/Server_Maintenance')->getDateEnabledTo()->format('Y-m-d H:i:s')
+                )
+            );
+        }
+    }
+
+    protected function addCronErrorMessage()
+    {
+        if (Mage::helper('M2ePro/Module')->isReadyToWork() &&
+            Mage::helper('M2ePro/Module_Cron')->isLastRunMoreThan(1, true) &&
+            !Mage::helper('M2ePro/Module')->isDevelopmentEnvironment()) {
+            $url = Mage::helper('M2ePro/Module_Support')->getKnowledgebaseUrl('cron-running');
+
+            $message  = 'Attention! AUTOMATIC Synchronization is not running at the moment. ';
+            $message .= 'It does not allow M2E Pro to work correctly.<br/>';
+            $message .= 'Please check this <a href="%url%" target="_blank">article</a> ';
+            $message .= 'for the details on how to resolve the problem.';
+            $message = Mage::helper('M2ePro')->__($message, $url);
+
+            $this->_getSession()->addError($message);
+        }
+    }
+
     //########################################
 
-    private function addLicenseActivationNotifications()
+    protected function addLicenseActivationNotifications()
     {
         if (!Mage::helper('M2ePro/Module_License')->getKey() ||
             !Mage::helper('M2ePro/Module_License')->getDomain() ||
-            !Mage::helper('M2ePro/Module_License')->getIp() ||
-            !Mage::helper('M2ePro/Module_License')->getDirectory()) {
-
+            !Mage::helper('M2ePro/Module_License')->getIp()) {
             $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
 
             $message = Mage::helper('M2ePro')->__(
@@ -280,195 +256,43 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         return false;
     }
 
-    private function addLicenseValidationFailNotifications()
+    protected function addLicenseValidationFailNotifications()
     {
         /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
         $licenseHelper = Mage::helper('M2ePro/Module_License');
 
-        if (!$licenseHelper->isValidDomain()) {
-
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-// M2ePro_TRANSLATIONS
-// M2E Pro License Key Validation is failed for this Domain. Go to the <a href="%url%" target="_blank">License Page</a>.
-            $message = 'M2E Pro License Key Validation is failed for this Domain. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>.';
-            $message = Mage::helper('M2ePro')->__($message,$url);
-
-            $this->_getSession()->addError($message);
-            return true;
+        if ($licenseHelper->isValidDomain() && $licenseHelper->isValidIp()) {
+            return false;
         }
 
-        if (!$licenseHelper->isValidIp()) {
+        $message = Mage::helper('M2ePro')->__(
+<<<HTML
+To start working with M2E Pro, you need to associate your current IP/Domain with a new Extension Key.
+ To do it, please go to System > Configuration > M2E Pro > Billing Info >
+ <a href="%url%" target="_blank">Extension Key</a>.
+ More details can be found <a href="%url2%" target="_blank">here</a>.
+HTML
+            ,
+            Mage::helper('M2ePro/View_Configuration')->getLicenseUrl(),
+            Mage::helper('M2ePro/Module_Support')->getKnowledgeBaseUrl('1561756')
+        );
 
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-// M2ePro_TRANSLATIONS
-// M2E Pro License Key Validation is failed for this IP. Go to the <a href="%url%" target="_blank">License Page</a>.
-            $message = 'M2E Pro License Key Validation is failed for this IP. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>.';
-            $message = Mage::helper('M2ePro')->__($message, $url);
-
-            $this->_getSession()->addError($message);
-            return true;
-        }
-
-        if (!$licenseHelper->isValidDirectory()) {
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-            // M2ePro_TRANSLATIONS
-            // M2E Pro License Key Validation is failed for this Base Directory. Go to the <a href="%url%" target="_blank">License Page</a>
-            $message = 'M2E Pro License Key Validation is failed for this Base Directory. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>';
-            $message = Mage::helper('M2ePro')->__($message, $url);
-
-            $this->_getSession()->addError($message);
-            return true;
-        }
-
-        return false;
+        $this->_getSession()->addError($message);
+        return true;
     }
 
-    // ---------------------------------------
-
-    private function addLicenseStatusesNotifications($component)
+    protected function addLicenseStatusNotifications()
     {
-        /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
-        $licenseHelper = Mage::helper('M2ePro/Module_License');
-
-        if ($licenseHelper->isSuspendedStatus($component)) {
-
+        if (!Mage::helper('M2ePro/Module_License')->getStatus()) {
             $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
 
-            // M2ePro_TRANSLATIONS
-            // M2E Pro Module License suspended for "%component_name%" Component. Go to the <a href="%url%" target="_blank">License Page</a>.
-            $message = 'M2E Pro Module License suspended for "%component_name%" Component. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>.';
             $message = Mage::helper('M2ePro')->__(
-                $message,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
+                'Your M2E Pro Instance suspended.
+                The details can be found in <a href="%url%" target ="_blank">Billing Info</a>.',
                 $url
             );
 
             $this->_getSession()->addError($message);
-            return true;
-        }
-
-        if ($licenseHelper->isClosedStatus($component)) {
-            // M2ePro_TRANSLATIONS
-            // M2E Pro Module License closed for "%component_name%" Component. Go to the <a href="%url%" target="_blank">License Page</a>
-            $message = 'M2E Pro Module License closed for "%component_name%" Component. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>';
-
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-            $message = Mage::helper('M2ePro')->__(
-                $message,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
-                $url
-            );
-
-            $this->_getSession()->addError($message);
-            return true;
-        }
-
-        if ($licenseHelper->isCanceledStatus($component)) {
-
-            $message = 'M2E Pro Module License canceled for "%component_name%" Component. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>';
-
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-            $message = Mage::helper('M2ePro')->__(
-                $message,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
-                $url
-            );
-
-            $this->_getSession()->addError($message);
-            return true;
-        }
-
-        return false;
-    }
-
-    private function addLicenseExpirationDatesNotifications($component)
-    {
-        /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
-        $licenseHelper = Mage::helper('M2ePro/Module_License');
-
-        if ($licenseHelper->isExpirationDate($component)) {
-
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-            // M2ePro_TRANSLATIONS
-            // M2E Pro Module License has expired for "%component_name%" Component. Go to the <a href="%url%" target="_blank">License Page</a>
-            $message = 'M2E Pro Module License has expired for "%component_name%" Component. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>';
-            $message = Mage::helper('M2ePro')->__(
-                $message,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
-                $url
-            );
-
-            $this->_getSession()->addError($message);
-            return true;
-        }
-
-        return false;
-    }
-
-    // ---------------------------------------
-
-    private function addLicenseTrialNotifications($component)
-    {
-        /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
-        $licenseHelper = Mage::helper('M2ePro/Module_License');
-
-        if ($licenseHelper->isTrialMode($component)) {
-
-            $expirationDate = $licenseHelper->getTextExpirationDate($component);
-
-            // M2ePro_TRANSLATIONS
-            // M2E Pro Module is running under Trial License for "%component_name%" Component, that will expire on %date%.
-            $message = 'M2E Pro Module is running under Trial License for "%component_name%" Component, ';
-            $message .= 'that will expire on %date%.';
-            $message = Mage::helper('M2ePro')->__(
-                $message,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
-                $expirationDate
-            );
-
-            $this->_getSession()->addWarning($message);
-            return true;
-        }
-
-        return false;
-    }
-
-    private function addLicensePreExpirationDateNotifications($component)
-    {
-        /** @var Ess_M2ePro_Helper_Module_License $licenseHelper */
-        $licenseHelper = Mage::helper('M2ePro/Module_License');
-
-        if ($licenseHelper->getIntervalBeforeExpirationDate($component) > 0 &&
-            $licenseHelper->getIntervalBeforeExpirationDate($component) <= 60*60*24*3) {
-
-            $url = Mage::helper('M2ePro/View_Configuration')->getLicenseUrl();
-
-            $expirationDate = $licenseHelper->getTextExpirationDate($component);
-
-            // M2ePro_TRANSLATIONS
-            // M2E Pro Module License will expire on %date% for "%component_name%" Component. Go to the <a href="%url%" target="_blank">License Page</a>
-            $message = 'M2E Pro Module License will expire on %date% for "%component_name%" Component. ';
-            $message .= 'Go to the <a href="%url%" target="_blank">License Page</a>';
-            $message = Mage::helper('M2ePro')->__(
-                $message,
-                $expirationDate,
-                Mage::helper('M2ePro/Component_'.ucfirst($component))->getTitle(),
-                $url
-            );
-
-            $this->_getSession()->addWarning($message);
             return true;
         }
 
@@ -477,7 +301,7 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 
     //########################################
 
-    private function addWizardUpgradeNotification()
+    protected function addWizardUpgradeNotification()
     {
         /** @var $wizardHelper Ess_M2ePro_Helper_Module_Wizard */
         $wizardHelper = Mage::helper('M2ePro/Module_Wizard');
@@ -490,7 +314,7 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 
         $activeWizardNick = $wizardHelper->getNick($activeWizard);
 
-        if ((bool)$this->getRequest()->getParam('wizard',false) ||
+        if ((bool)$this->getRequest()->getParam('wizard', false) ||
             $this->getRequest()->getControllerName() == 'adminhtml_wizard_'.$activeWizardNick) {
             return;
         }
@@ -504,7 +328,7 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
         // ---------------------------------------
 
         $this->getLayout()->getBlock('content')->append(
-            $wizardHelper->createBlock('notification',$activeWizardNick)
+            $wizardHelper->createBlock('notification', $activeWizardNick)
         );
     }
 
@@ -512,26 +336,13 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 
     protected function addRequirementsErrorMessage()
     {
-        if (Mage::helper('M2ePro/Module')->getConfig()->getGroupValue('/view/requirements/popup/', 'closed')) {
+        if (Mage::helper('M2ePro/Module')->getCacheConfig()->getGroupValue('/view/requirements/popup/', 'closed')) {
             return;
         };
 
-        $isMeetRequirements = Mage::helper('M2ePro/Data_Cache_Permanent')->getValue('is_meet_requirements');
-
-        if ($isMeetRequirements === false) {
-            $isMeetRequirements = true;
-            foreach (Mage::helper('M2ePro/Module')->getRequirementsInfo() as $requirement) {
-                if (!$requirement['current']['status']) {
-                    $isMeetRequirements = false;
-                    break;
-                }
-            }
-            Mage::helper('M2ePro/Data_Cache_Permanent')->setValue(
-                'is_meet_requirements',(int)$isMeetRequirements, array(), 60*60
-            );
-        }
-
-        if ($isMeetRequirements) {
+        /** @var Ess_M2ePro_Model_Requirements_Manager $manager */
+        $manager = Mage::getModel('M2ePro/Requirements_Manager');
+        if ($manager->isMeet()) {
             return;
         }
 
@@ -543,18 +354,14 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 
     //########################################
 
-    private function isContentLocked()
+    protected function isContentLocked()
     {
-        return $this->isContentLockedByWizard() ||
-               Mage::helper('M2ePro/Client')->isBrowserIE() ||
-               Mage::helper('M2ePro/Module')->isLockedByServer() ||
-               (
-                   Mage::helper('M2ePro/Module_Maintenance')->isEnabled() &&
-                   !Mage::helper('M2ePro/Module_Maintenance')->isOwner()
-               );
+        return Mage::helper('M2ePro/Module')->isDisabled() ||
+               $this->isContentLockedByWizard() ||
+               Mage::helper('M2ePro/Client')->isBrowserIE();
     }
 
-    private function isContentLockedByWizard()
+    protected function isContentLockedByWizard()
     {
         $wizardHelper = Mage::helper('M2ePro/Module_Wizard');
 
@@ -564,7 +371,7 @@ abstract class Ess_M2ePro_Controller_Adminhtml_MainController
 
         $activeWizardNick = $wizardHelper->getNick($activeWizard);
 
-        if ((bool)$this->getRequest()->getParam('wizard',false) ||
+        if ((bool)$this->getRequest()->getParam('wizard', false) ||
             $this->getRequest()->getControllerName() == 'adminhtml_wizard_'.$activeWizardNick) {
             return false;
         }

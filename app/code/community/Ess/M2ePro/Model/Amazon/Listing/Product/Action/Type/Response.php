@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -11,22 +11,27 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
     /**
      * @var array
      */
-    private $params = array();
+    protected $_params = array();
 
     /**
      * @var Ess_M2ePro_Model_Listing_Product
      */
-    private $listingProduct = NULL;
+    protected $_listingProduct = null;
 
     /**
      * @var Ess_M2ePro_Model_Amazon_Listing_Product_Action_Configurator
      */
-    private $configurator = NULL;
+    protected $_configurator = null;
 
     /**
      * @var Ess_M2ePro_Model_Amazon_Listing_Product_Action_RequestData
      */
-    protected $requestData = NULL;
+    protected $_requestData = null;
+
+    /**
+     * @var array
+     */
+    protected $_requestMetaData = array();
 
     //########################################
 
@@ -36,7 +41,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
 
     public function setParams(array $params = array())
     {
-        $this->params = $params;
+        $this->_params = $params;
     }
 
     /**
@@ -44,7 +49,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     protected function getParams()
     {
-        return $this->params;
+        return $this->_params;
     }
 
     // ---------------------------------------
@@ -54,7 +59,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     public function setListingProduct(Ess_M2ePro_Model_Listing_Product $object)
     {
-        $this->listingProduct = $object;
+        $this->_listingProduct = $object;
     }
 
     /**
@@ -62,7 +67,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     protected function getListingProduct()
     {
-        return $this->listingProduct;
+        return $this->_listingProduct;
     }
 
     // ---------------------------------------
@@ -72,7 +77,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     public function setConfigurator(Ess_M2ePro_Model_Amazon_Listing_Product_Action_Configurator $object)
     {
-        $this->configurator = $object;
+        $this->_configurator = $object;
     }
 
     /**
@@ -80,7 +85,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     protected function getConfigurator()
     {
-        return $this->configurator;
+        return $this->_configurator;
     }
 
     // ---------------------------------------
@@ -90,7 +95,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     public function setRequestData(Ess_M2ePro_Model_Amazon_Listing_Product_Action_RequestData $object)
     {
-        $this->requestData = $object;
+        $this->_requestData = $object;
     }
 
     /**
@@ -98,7 +103,20 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
      */
     protected function getRequestData()
     {
-        return $this->requestData;
+        return $this->_requestData;
+    }
+
+    // ---------------------------------------
+
+    public function getRequestMetaData()
+    {
+        return $this->_requestMetaData;
+    }
+
+    public function setRequestMetaData($value)
+    {
+        $this->_requestMetaData = $value;
+        return $this;
     }
 
     //########################################
@@ -179,8 +197,8 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
 
     protected function appendStatusChangerValue($data)
     {
-        if (isset($this->params['status_changer'])) {
-            $data['status_changer'] = (int)$this->params['status_changer'];
+        if (isset($this->_params['status_changer'])) {
+            $data['status_changer'] = (int)$this->_params['status_changer'];
         }
 
         return $data;
@@ -190,44 +208,110 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
 
     protected function appendQtyValues($data)
     {
-        if (!$this->getRequestData()->hasQty()) {
-            return $data;
+        if ($this->getRequestData()->hasQty()) {
+            $data['online_qty'] = (int)$this->getRequestData()->getQty();
+
+            if ((int)$data['online_qty'] > 0) {
+                $data['status'] = Ess_M2ePro_Model_Listing_Product::STATUS_LISTED;
+            } else {
+                $data['status'] = Ess_M2ePro_Model_Listing_Product::STATUS_STOPPED;
+            }
         }
 
-        $data['online_qty'] = (int)$this->getRequestData()->getQty();
+        if ($this->getRequestData()->hasHandlingTime()) {
+            $data['online_handling_time'] = $this->getRequestData()->getHandlingTime();
+        }
 
-        if ((int)$data['online_qty'] > 0) {
-            $data['status'] = Ess_M2ePro_Model_Listing_Product::STATUS_LISTED;
-        } else {
-            $data['status'] = Ess_M2ePro_Model_Listing_Product::STATUS_STOPPED;
+        if ($this->getRequestData()->hasRestockDate()) {
+            $data['online_restock_date'] = $this->getRequestData()->getRestockDate();
         }
 
         return $data;
     }
 
-    protected function appendPriceValues($data)
+    protected function appendRegularPriceValues($data)
     {
-        if (!$this->getRequestData()->hasPrice()) {
+        if (!$this->getRequestData()->hasRegularPrice()) {
             return $data;
         }
 
-        $data['online_price'] = (float)$this->getRequestData()->getPrice();
+        $data['online_regular_price'] = (float)$this->getRequestData()->getRegularPrice();
 
-        $data['online_sale_price'] = NULL;
-        $data['online_sale_price_start_date'] = NULL;
-        $data['online_sale_price_end_date'] = NULL;
+        $data['online_regular_sale_price'] = null;
+        $data['online_regular_sale_price_start_date'] = null;
+        $data['online_regular_sale_price_end_date'] = null;
 
-        if ($this->getRequestData()->hasSalePrice()) {
-
-            $salePrice = (float)$this->getRequestData()->getSalePrice();
+        if ($this->getRequestData()->hasRegularSalePrice()) {
+            $salePrice = (float)$this->getRequestData()->getRegularSalePrice();
 
             if ($salePrice > 0) {
-                $data['online_sale_price']            = $salePrice;
-                $data['online_sale_price_start_date'] = $this->getRequestData()->getSalePriceStartDate();
-                $data['online_sale_price_end_date']   = $this->getRequestData()->getSalePriceEndDate();
+                $data['online_regular_sale_price'] = $salePrice;
+                $data['online_regular_sale_price_start_date'] = $this->getRequestData()->getRegularSalePriceStartDate();
+                $data['online_regular_sale_price_end_date'] = $this->getRequestData()->getRegularSalePriceEndDate();
             } else {
-                $data['online_sale_price'] = 0;
+                $data['online_regular_sale_price'] = 0;
             }
+        }
+
+        return $data;
+    }
+
+    protected function appendBusinessPriceValues($data)
+    {
+        if (!$this->getRequestData()->hasBusinessPrice()) {
+            return $data;
+        }
+
+        $data['online_business_price'] = (float)$this->getRequestData()->getBusinessPrice();
+
+        if ($this->getRequestData()->hasBusinessDiscounts()) {
+            $businessDiscounts = $this->getRequestData()->getBusinessDiscounts();
+            $data['online_business_discounts'] = json_encode($businessDiscounts['values']);
+        }
+
+        return $data;
+    }
+
+    protected function appendDetailsValues($data)
+    {
+        $requestMetadata = $this->getRequestMetaData();
+        if (!isset($requestMetadata['details_data'])) {
+            return $data;
+        }
+
+        $data['online_details_data'] = json_encode($requestMetadata['details_data']);
+
+        return $data;
+    }
+
+    protected function appendImagesValues($data)
+    {
+        $requestMetadata = $this->getRequestMetaData();
+        if (!isset($requestMetadata['images_data'])) {
+            return $data;
+        }
+
+        $data['online_images_data'] = json_encode($requestMetadata['images_data']);
+
+        return $data;
+    }
+
+    //########################################
+
+    protected function appendGiftSettingsStatus($data)
+    {
+        if (!$this->getRequestData()->hasGiftWrap() && !$this->getRequestData()->hasGiftMessage()) {
+            return $data;
+        }
+
+        if (!isset($data['additional_data'])) {
+            $data['additional_data'] = $this->getListingProduct()->getAdditionalData();
+        }
+
+        if (!$this->getRequestData()->getGiftWrap() && !$this->getRequestData()->getGiftMessage()) {
+            $data['additional_data']['online_gift_settings_disabled'] = true;
+        } else {
+            $data['additional_data']['online_gift_settings_disabled'] = false;
         }
 
         return $data;
@@ -237,7 +321,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
 
     protected function setLastSynchronizationDates()
     {
-        if (!$this->getConfigurator()->isQtyAllowed() && !$this->getConfigurator()->isPriceAllowed()) {
+        if (!$this->getConfigurator()->isQtyAllowed() && !$this->getConfigurator()->isRegularPriceAllowed()) {
             return;
         }
 
@@ -247,7 +331,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_Response
             $additionalData['last_synchronization_dates']['qty'] = Mage::helper('M2ePro')->getCurrentGmtDate();
         }
 
-        if ($this->getConfigurator()->isPriceAllowed()) {
+        if ($this->getConfigurator()->isRegularPriceAllowed()) {
             $additionalData['last_synchronization_dates']['price'] = Mage::helper('M2ePro')->getCurrentGmtDate();
         }
 

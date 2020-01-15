@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -165,7 +165,7 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
 
     // ---------------------------------------
 
-    private function _getGeneralFromAttributeSets(array $attributeSetIds)
+    protected function _getGeneralFromAttributeSets(array $attributeSetIds)
     {
         if (count($attributeSetIds) > 50) {
             throw new Ess_M2ePro_Model_Exception("Attribute sets must be less then 50");
@@ -208,14 +208,15 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
 
     // ---------------------------------------
 
-    private function getConfigurable(array $attributeSetIds = array())
+    protected function getConfigurable(array $attributeSetIds = array())
     {
         /** @var $connRead Varien_Db_Adapter_Pdo_Mysql */
         $connRead = Mage::getSingleton('core/resource')->getConnection('core_read');
 
-        $cpTable  = Mage::getSingleton('core/resource')->getTableName('catalog/product');
-        $saTable  = Mage::getSingleton('core/resource')->getTableName('catalog/product_super_attribute');
-        $aTable   = Mage::getSingleton('core/resource')->getTableName('eav_attribute');
+        $cpTable  = Mage::helper('M2ePro/Module_Database_Structure')->getTableNameWithPrefix('catalog/product');
+        $saTable  = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('catalog/product_super_attribute');
+        $aTable   = Mage::helper('M2ePro/Module_Database_Structure')->getTableNameWithPrefix('eav_attribute');
 
         $select = $connRead->select()
             ->distinct(true)
@@ -264,7 +265,7 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
 
         /** @var $connRead Varien_Db_Adapter_Pdo_Mysql */
         $connRead = Mage::getSingleton('core/resource')->getConnection('core_read');
-        $tableName = Mage::getSingleton('core/resource')->getTableName('eav_attribute');
+        $tableName = Mage::helper('M2ePro/Module_Database_Structure')->getTableNameWithPrefix('eav_attribute');
 
         $entityTypeId = Mage::getSingleton('eav/config')->getEntityType(Mage_Catalog_Model_Product::ENTITY)->getId();
         $dbSelect = $connRead->select();
@@ -295,16 +296,20 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
                 return true;
             }
         }
+
         return false;
     }
 
-    public function filterByInputTypes(array $attributes, array $inputTypes)
-    {
+    public function filterByInputTypes(
+        array $attributes,
+        array $frontendInputTypes = array(),
+        array $backendInputTypes = array()
+    ) {
         if (empty($attributes)) {
             return array();
         }
 
-        if (empty($inputTypes)) {
+        if (empty($frontendInputTypes) && empty($backendInputTypes)) {
             return $attributes;
         }
 
@@ -315,8 +320,15 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
 
         $attributeCollection = Mage::getResourceModel('catalog/product_attribute_collection')
             ->addFieldToFilter('attribute_code', array('in' => $attributeCodes))
-            ->addFieldToFilter('frontend_input', array('in' => $inputTypes))
             ->setOrder('frontend_label', Varien_Data_Collection_Db::SORT_ORDER_ASC);
+
+        if (!empty($frontendInputTypes)) {
+            $attributeCollection->addFieldToFilter('frontend_input', array('in' => $frontendInputTypes));
+        }
+
+        if (!empty($backendInputTypes)) {
+            $attributeCollection->addFieldToFilter('backend_type', array('in' => $backendInputTypes));
+        }
 
         $filteredAttributes = $attributeCollection->toArray();
         $resultAttributes = array();
@@ -334,7 +346,7 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
 
     public function getSetsFromProductsWhichLacksAttributes(array $attributes, array $productIds)
     {
-        if (count($attributes) == 0 || count($productIds) == 0) {
+        if (empty($attributes) || empty($productIds)) {
             return array();
         }
 
@@ -344,11 +356,12 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
         foreach ($scopeAttributesOptionArray as $scopeAttributesOption) {
             $scopeAttributes[] = $scopeAttributesOption['code'];
         }
+
         // ---------------------------------------
 
         $missingAttributes = array_diff($attributes, $scopeAttributes);
 
-        if (count($missingAttributes) == 0) {
+        if (empty($missingAttributes)) {
             return array();
         }
 
@@ -378,6 +391,48 @@ class Ess_M2ePro_Helper_Magento_Attribute extends Ess_M2ePro_Helper_Magento_Abst
         }
 
         return array_unique($missingAttributesSets);
+    }
+
+    //########################################
+
+    public function isAttributeInputTypePrice($attributeCode)
+    {
+        $attributes = $this->filterByInputTypes(
+            array(array('code' => $attributeCode)), array('price')
+        );
+
+        if (count($attributes)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function convertAttributeTypePriceFromStoreToMarketplace(
+        Ess_M2ePro_Model_Magento_Product $magentoProduct,
+        $attributeCode,
+        $currencyCode,
+        $store
+    ) {
+        $attributeValue = $magentoProduct->getAttributeValue($attributeCode);
+
+        if (empty($attributeValue)) {
+            return $attributeValue;
+        }
+
+        $isPriceConvertEnabled = (int)Mage::helper('M2ePro/Module')->getConfig()->getGroupValue(
+            '/magento/attribute/', 'price_type_converting'
+        );
+
+        if ($isPriceConvertEnabled && $this->isAttributeInputTypePrice($attributeCode)) {
+            $attributeValue = Mage::getSingleton('M2ePro/Currency')->convertPrice(
+                $attributeValue,
+                $currencyCode,
+                $store
+            );
+        }
+
+        return $attributeValue;
     }
 
     //########################################

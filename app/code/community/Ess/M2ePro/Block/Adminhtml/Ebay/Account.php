@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -35,11 +35,13 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Account extends Mage_Adminhtml_Block_Widge
         $this->removeButton('save');
         $this->removeButton('edit');
 
-        $this->_addButton('add', array(
+        $this->_addButton(
+            'add', array(
             'label'     => Mage::helper('M2ePro')->__('Add Account'),
             'onclick'   => 'setLocation(\''.$this->getUrl('*/adminhtml_ebay_account/new').'\');',
             'class'     => 'add'
-        ));
+            )
+        );
         // ---------------------------------------
     }
 

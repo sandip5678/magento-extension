@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -14,45 +14,41 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order extends Mage_Adminhtml_Block_Widget_
     {
         parent::__construct();
 
-        // Initialization block
-        // ---------------------------------------
         $this->setId('ebayOrder');
         $this->_blockGroup = 'M2ePro';
         $this->_controller = 'adminhtml_ebay_order';
-        // ---------------------------------------
 
-        // Set header text
-        // ---------------------------------------
-        $this->_headerText = Mage::helper('M2ePro')->__('Orders');
-        // ---------------------------------------
+        if (!Mage::helper('M2ePro/Component')->isSingleActiveComponent()) {
+            $componentName = Mage::helper('M2ePro/Component_Ebay')->getTitle();
+            $this->_headerText = Mage::helper('M2ePro')->__('%component_name% / Orders', $componentName);
+        } else {
+            $this->_headerText = Mage::helper('M2ePro')->__('Orders');
+        }
 
-        // Set buttons actions
-        // ---------------------------------------
         $this->removeButton('back');
         $this->removeButton('reset');
         $this->removeButton('delete');
         $this->removeButton('add');
         $this->removeButton('save');
         $this->removeButton('edit');
-        // ---------------------------------------
 
-        // ---------------------------------------
         $url = $this->getUrl('*/adminhtml_ebay_account/index');
-        $this->_addButton('accounts', array(
+        $this->_addButton(
+            'accounts', array(
             'label'     => Mage::helper('M2ePro')->__('Accounts'),
             'onclick'   => 'setLocation(\'' . $url .'\')',
             'class'     => 'button_link'
-        ));
-        // ---------------------------------------
+            )
+        );
 
-        // ---------------------------------------
         $url = $this->getUrl('*/adminhtml_ebay_log/order');
-        $this->_addButton('logs', array(
-            'label'     => Mage::helper('M2ePro')->__('View Logs'),
+        $this->_addButton(
+            'logs', array(
+            'label'     => Mage::helper('M2ePro')->__('Logs & Events'),
             'onclick'   => 'window.open(\'' . $url .'\')',
             'class'     => 'button_link'
-        ));
-        // ---------------------------------------
+            )
+        );
     }
 
     //########################################
@@ -89,18 +85,22 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order extends Mage_Adminhtml_Block_Widget_
         // ---------------------------------------
 
         // ---------------------------------------
-        $marketplaceFilterBlock = $this->getLayout()->createBlock('M2ePro/adminhtml_marketplace_switcher', '', array(
+        $marketplaceFilterBlock = $this->getLayout()->createBlock(
+            'M2ePro/adminhtml_marketplace_switcher', '', array(
             'component_mode' => Ess_M2ePro_Helper_Component_Ebay::NICK,
             'controller_name' => 'adminhtml_ebay_order'
-        ));
+            )
+        );
         $marketplaceFilterBlock->setUseConfirm(false);
         // ---------------------------------------
 
         // ---------------------------------------
-        $accountFilterBlock = $this->getLayout()->createBlock('M2ePro/adminhtml_account_switcher', '', array(
+        $accountFilterBlock = $this->getLayout()->createBlock(
+            'M2ePro/adminhtml_account_switcher', '', array(
             'component_mode' => Ess_M2ePro_Helper_Component_Ebay::NICK,
             'controller_name' => 'adminhtml_ebay_order'
-        ));
+            )
+        );
         $accountFilterBlock->setUseConfirm(false);
         // ---------------------------------------
 
@@ -117,8 +117,8 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order extends Mage_Adminhtml_Block_Widget_
 
         return $helpBlock->toHtml()
             . '<div class="filter_block">'
-            . $marketplaceFilterBlock->toHtml()
             . $accountFilterBlock->toHtml()
+            . $marketplaceFilterBlock->toHtml()
             . $orderStateSwitcherBlock->toHtml()
             . '</div>'
             . $editItemBlock->toHtml()

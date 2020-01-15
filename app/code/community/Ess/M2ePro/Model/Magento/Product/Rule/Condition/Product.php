@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -24,11 +24,14 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
         if ($this->getInputType()=='date' && !$this->getIsValueParsed()) {
             // date format intentionally hard-coded
             $this->setValue(
-                Mage::app()->getLocale()->date($this->getData('value'),
-                    Varien_Date::DATE_INTERNAL_FORMAT, null, false)->toString(Varien_Date::DATE_INTERNAL_FORMAT)
+                Mage::app()->getLocale()->date(
+                    $this->getData('value'),
+                    Varien_Date::DATE_INTERNAL_FORMAT, null, false
+                )->toString(Varien_Date::DATE_INTERNAL_FORMAT)
             );
             $this->setIsValueParsed(true);
         }
+
         return $this->getData('value');
     }
 
@@ -58,6 +61,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
             if (!$product->getResource()) {
                 return false;
             }
+
             $attr = $product->getResource()->getAttribute($attrCode);
 
             if ($attr && $attr->getBackendType() == 'datetime' && !is_int($this->getValue())) {
@@ -78,7 +82,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
             return $this->validateAttribute($product->getData($attrCode));
         } else {
             $productStoreId = $product->getData('store_id');
-            if (is_null($productStoreId) ||
+            if ($productStoreId === null ||
                 !isset($this->_entityAttributeValues[(int)$product->getId()][(int)$productStoreId])) {
                 $productStoreId = 0;
             }
@@ -163,6 +167,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
              */
             $this->_defaultOperatorInputByType['price'] = array('==', '!=', '>=', '>', '<=', '<', '{}', '!{}');
         }
+
         return $this->_defaultOperatorInputByType;
     }
 
@@ -182,6 +187,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
             $obj->setEntity(Mage::getResourceSingleton('catalog/product'))
                 ->setFrontendInput('text');
         }
+
         return $obj;
     }
 
@@ -196,7 +202,9 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
         $attributes['category_ids'] = Mage::helper('catalogrule')->__('Category');
 
         foreach ($this->getCustomFilters() as $filterId => $instanceName) {
-            $customFilterInstance = $this->getCustomFilterInstance($filterId);
+            // $this->_data property is not initialized jet, so we can't cache a created custom filter as
+            // it requires that data
+            $customFilterInstance = $this->getCustomFilterInstance($filterId, false);
 
             if ($customFilterInstance instanceof Ess_M2ePro_Model_Magento_Product_Rule_Custom_Abstract) {
                 $attributes[$filterId] = $customFilterInstance->getLabel();
@@ -215,7 +223,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
 
         $attributes = array();
         foreach ($productAttributes as $attribute) {
-            /* @var $attribute Mage_Catalog_Model_Resource_Eav_Attribute */
+            /** @var $attribute Mage_Catalog_Model_Resource_Eav_Attribute */
             $attributes[$attribute->getAttributeCode()] = $attribute->getFrontendLabel();
         }
 
@@ -262,6 +270,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
                 } else {
                     $addEmptyOption = true;
                 }
+
                 $selectOptions = $attributeObject->getSource()->getAllOptions($addEmptyOption);
             }
         }
@@ -272,14 +281,17 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
             if (!$selectReady) {
                 $this->setData('value_select_options', $selectOptions);
             }
+
             if (!$hashedReady) {
                 $hashedOptions = array();
                 foreach ($selectOptions as $o) {
                     if (is_array($o['value'])) {
                         continue; // We cannot use array as index
                     }
+
                     $hashedOptions[$o['value']] = $o['label'];
                 }
+
                 $this->setData('value_option', $hashedOptions);
             }
         }
@@ -296,7 +308,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
     public function getValueOption($option=null)
     {
         $this->_prepareValueOptions();
-        return $this->getData('value_option'.(!is_null($option) ? '/'.$option : ''));
+        return $this->getData('value_option'.($option !== null ? '/' . $option : ''));
     }
 
     /**
@@ -322,7 +334,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
         switch ($this->getAttribute()) {
             case 'sku': case 'category_ids':
             $image = Mage::getDesign()->getSkinUrl('M2ePro/images/rule_chooser_trigger.gif');
-            break;
+                break;
         }
 
         if (!empty($image)) {
@@ -330,13 +342,14 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
                 '" alt="" class="v-middle rule-chooser-trigger" title="' .
                 Mage::helper('rule')->__('Open Chooser') . '" /></a>';
         }
+
         return $html;
     }
 
     /**
      * Collect validated attributes
      *
-     * @param Mage_Catalog_Model_Resource_Eav_Mysql4_Product_Collection $productCollection
+     * @param Mage_Catalog_Model_Resource_Eav_Resource_Product_Collection $productCollection
      * @return Mage_CatalogRule_Model_Rule_Condition_Product
      */
     public function collectValidatedAttributes($productCollection)
@@ -368,15 +381,19 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
         if ($this->isFilterCustom($this->getAttribute())) {
             return $this->getCustomFilterInstance($this->getAttribute())->getInputType();
         }
+
         if ($this->getAttribute() == 'attribute_set_id') {
             return 'select';
         }
+
         if (!is_object($this->getAttributeObject())) {
             return 'string';
         }
+
         if ($this->getAttributeObject()->getAttributeCode() == 'category_ids') {
             return 'category';
         }
+
         switch ($this->getAttributeObject()->getFrontendInput()) {
             case 'select':
                 return 'select';
@@ -405,12 +422,15 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
         if ($this->isFilterCustom($this->getAttribute())) {
             return $this->getCustomFilterInstance($this->getAttribute())->getValueElementType();
         }
+
         if ($this->getAttribute() == 'attribute_set_id') {
             return 'select';
         }
+
         if (!is_object($this->getAttributeObject())) {
             return 'text';
         }
+
         switch ($this->getAttributeObject()->getFrontendInput()) {
             case 'select':
             case 'boolean':
@@ -468,7 +488,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
 
         switch ($this->getAttribute()) {
             case 'sku': case 'category_ids':
-            return true;
+                return true;
         }
 
         if (is_object($this->getAttributeObject())) {
@@ -477,6 +497,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
                     return true;
             }
         }
+
         return false;
     }
 
@@ -497,11 +518,11 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
                 if (!empty($arr['operator'])
                     && in_array($arr['operator'], array('!()', '()'))
                     && false !== strpos($arr['value'], ',')) {
-
                     $tmp = array();
                     foreach (explode(',', $arr['value']) as $value) {
                         $tmp[] = Mage::app()->getLocale()->getNumber($value);
                     }
+
                     $arr['value'] =  implode(',', $tmp);
                 } else {
                     $arr['value'] =  Mage::app()->getLocale()->getNumber($arr['value']);
@@ -509,6 +530,7 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
             } else {
                 $arr['value'] = false;
             }
+
             $arr['is_value_parsed'] = isset($arr['is_value_parsed'])
                 ? Mage::app()->getLocale()->getNumber($arr['is_value_parsed']) : false;
         }
@@ -554,22 +576,27 @@ class Ess_M2ePro_Model_Magento_Product_Rule_Condition_Product
 
     /**
      * @param $filterId
+     * @param $isReadyToCache
      * @return Ess_M2ePro_Model_Magento_Product_Rule_Custom_Abstract
      */
-    protected function getCustomFilterInstance($filterId)
+    protected function getCustomFilterInstance($filterId, $isReadyToCache = true)
     {
         $customFilters = $this->getCustomFilters();
         if (!isset($customFilters[$filterId])) {
             return null;
         }
 
-        if (!isset($this->_customFiltersCache[$filterId])) {
-            $this->_customFiltersCache[$filterId] = Mage::getModel(
-                'M2ePro/Magento_Product_Rule_Custom_'.$customFilters[$filterId]
-            );
+        if (isset($this->_customFiltersCache[$filterId])) {
+            return $this->_customFiltersCache[$filterId];
         }
 
-        return $this->_customFiltersCache[$filterId];
+        /** @var Ess_M2ePro_Model_Magento_Product_Rule_Custom_Abstract $model */
+        $model = Mage::getModel('M2ePro/Magento_Product_Rule_Custom_'.$customFilters[$filterId]);
+        $model->setFilterOperator($this->getData('operator'))
+              ->setFilterCondition($this->getData('value'));
+
+        $isReadyToCache && $this->_customFiltersCache[$filterId] = $model;
+        return $model;
     }
 
     //########################################

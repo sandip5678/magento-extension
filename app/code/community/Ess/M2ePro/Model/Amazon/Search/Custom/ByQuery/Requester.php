@@ -2,28 +2,28 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Amazon_Search_Custom_ByQuery_Requester
-    extends Ess_M2ePro_Model_Connector_Amazon_Search_ByQuery_ItemsRequester
+    extends Ess_M2ePro_Model_Amazon_Connector_Search_ByQuery_ItemsRequester
 {
     //########################################
 
     protected function getQuery()
     {
-        return $this->params['query'];
+        return $this->_params['query'];
     }
 
     protected function getVariationBadParentModifyChildToSimple()
     {
-        return $this->params['variation_bad_parent_modify_child_to_simple'];
+        return $this->_params['variation_bad_parent_modify_child_to_simple'];
     }
 
     //########################################
 
-    protected function getRequestData()
+    public function getRequestData()
     {
         return array_merge(
             parent::getRequestData(),

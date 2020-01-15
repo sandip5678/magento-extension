@@ -2,14 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Magento_Product_Index
 {
     /** @var Mage_Index_Model_Indexer */
-    private $indexer = null;
+    protected $_indexer = null;
 
     //########################################
 
@@ -18,10 +18,11 @@ class Ess_M2ePro_Model_Magento_Product_Index
      */
     public function getIndexer()
     {
-        if (is_null($this->indexer)) {
-            $this->indexer = Mage::getSingleton('index/indexer');
+        if ($this->_indexer === null) {
+            $this->_indexer = Mage::getSingleton('index/indexer');
         }
-        return $this->indexer;
+
+        return $this->_indexer;
     }
 
     /**
@@ -83,7 +84,7 @@ class Ess_M2ePro_Model_Magento_Product_Index
             return false;
         }
 
-        /** @var $eventsCollection Mage_Core_Model_Mysql4_Collection_Abstract */
+        /** @var $eventsCollection Mage_Core_Model_Resource_Db_Collection_Abstract */
         $eventsCollection = Mage::getResourceModel('index/event_collection')
             ->addProcessFilter($process, Mage_Index_Model_Process::EVENT_STATUS_NEW);
 

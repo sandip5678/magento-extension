@@ -1,11 +1,20 @@
 <?php
-    /* @var Ess_M2ePro_Block_Adminhtml_Wizard_InstallationEbay_Installation_License_Content $this*/
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/* @var Ess_M2ePro_Block_Adminhtml_Wizard_InstallationEbay_Installation_License_Content $this*/
+
 ?>
 
 <script type="text/javascript">
 
     M2ePro.translator.add(<?php echo json_encode(array(
-        'An error during of license creation occurred.' => Mage::helper('M2ePro')->__('The eBay token obtaining is currently unavailable. Please try again later.'),
+        'An error during of Extension Key creation occurred.' => Mage::helper('M2ePro')->__('The eBay token obtaining is currently unavailable. Please try again later.'),
         'Register Your M2E Pro Extension' => Mage::helper('M2ePro')->__('Register Your M2E Pro Extension')
     )); ?>);
 
@@ -18,11 +27,13 @@
         });
 
         $('sign_into_ebay_button').observe('click',function() {
-            InstallationEbayWizardObj.createLicenseAndGetToken('<?php echo Ess_M2ePro_Model_Connector_Ebay_Abstract::MODE_PRODUCTION; ?>');
+            InstallationEbayWizardObj.createLicenseAndGetToken('production');
         });
-        $('sign_into_ebay_sandbox').observe('click',function() {
-            InstallationEbayWizardObj.createLicenseAndGetToken('<?php echo Ess_M2ePro_Model_Connector_Ebay_Abstract::MODE_SANDBOX; ?>');
-        });
+
+        var ebaySandboxSignIn = function() {
+            InstallationEbayWizardObj.createLicenseAndGetToken('sandbox');
+        };
+        $('sign_into_ebay_sandbox').observe('click',ebaySandboxSignIn);
 
         $('license_popup_cancel_link').observe('click', function() {
             InstallationEbayWizardObj.closePopupAction();
@@ -34,6 +45,51 @@
 
         <?php if ($this->getData('isLicenseStepFinished')) : ?>
             $('edit_license').hide();
+            $('block_private_policy_agreement').hide();
+        <?php else: ?>
+            (function() {
+                var disable = function (element) {
+                    if (element.tagName === 'A') {
+                        element.stopObserving('click', ebaySandboxSignIn);
+                        element.style.color = 'gray';
+                        return;
+                    } else {
+                        element.addClassName('disabled');
+                        element.disabled = true;
+                    }
+                },
+                    enable = function(element) {
+                        if (element.tagName === 'A') {
+                            element.observe('click', ebaySandboxSignIn);
+                            element.style.color = '';
+                            return;
+                        } else {
+                            element.removeClassName('disabled');
+                            element.disabled = false;
+                        }
+                    },
+                    elements = [
+                        $('sign_into_ebay_button'),
+                        $('register_on_ebay_button'),
+                        $('sign_into_ebay_sandbox')
+                    ];
+
+                elements.each(function (el) {
+                    disable(el);
+                });
+
+                $('private_policy_agreement').observe('click', function () {
+
+                    var checkbox = this;
+                    elements.each(function (el) {
+                        if (checkbox.checked === true) {
+                            enable(el);
+                        } else {
+                            disable(el);
+                        }
+                    });
+                });
+            })();
         <?php endif; ?>
 
         InstallationEbayWizardObj.checkFormFilling();
@@ -68,7 +124,7 @@
                             <?php echo Mage::helper('M2ePro')->__('First Name') ?>:
                         </td>
                         <td id="firstname" class="value" style="width: 200px">
-                            <input type="hidden" name="form_email" class="required-entry" value="<?php echo $this->getUserInfoValue('firstname') ; ?>">
+                            <input type="hidden" name="form_firstname" class="required-entry" value="<?php echo $this->getUserInfoValue('firstname') ; ?>">
                             <span><?php echo $this->getUserInfoValue('firstname', 'span'); ?></span>
                         </td>
                     </tr>
@@ -78,8 +134,18 @@
                             <?php echo Mage::helper('M2ePro')->__('Last Name') ?>:
                         </td>
                         <td id="lastname" class="value" style="width: 200px">
-                            <input type="hidden" name="form_email" class="required-entry" value="<?php echo $this->getUserInfoValue('lastname') ; ?>">
+                            <input type="hidden" name="form_lastname" class="required-entry" value="<?php echo $this->getUserInfoValue('lastname') ; ?>">
                             <span><?php echo $this->getUserInfoValue('lastname', 'span'); ?></span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="label" style="width: 150px">
+                            <?php echo Mage::helper('M2ePro')->__('Phone') ?>:
+                        </td>
+                        <td id="phone" class="value" style="width: 200px">
+                            <input type="hidden" name="form_phone" class="required-entry" value="<?php echo $this->getUserInfoValue('phone') ; ?>">
+                            <span><?php echo $this->getUserInfoValue('phone', 'span'); ?></span>
                         </td>
                     </tr>
 
@@ -102,7 +168,7 @@
                             <?php echo Mage::helper('M2ePro')->__('City') ?>:
                         </td>
                         <td id="city" class="value" style="width: 200px">
-                            <input type="hidden" name="form_email" class="required-entry" value="<?php echo $this->getUserInfoValue('city') ; ?>">
+                            <input type="hidden" name="form_city" class="required-entry" value="<?php echo $this->getUserInfoValue('city') ; ?>">
                             <span><?php echo $this->getUserInfoValue('city', 'span'); ?></span>
                         </td>
                     </tr>
@@ -112,7 +178,7 @@
                             <?php echo Mage::helper('M2ePro')->__('Postal Code') ?>:
                         </td>
                         <td id="postal_code" class="value" style="width: 200px">
-                            <input type="hidden" name="form_email" class="required-entry" value="<?php echo $this->getUserInfoValue('postal_code') ; ?>">
+                            <input type="hidden" name="form_postal_code" class="required-entry" value="<?php echo $this->getUserInfoValue('postal_code') ; ?>">
                             <span><?php echo $this->getUserInfoValue('postal_code', 'span'); ?></span>
                         </td>
                     </tr>
@@ -137,6 +203,12 @@
     </div>
 
     <div class="clear"></div>
+
+    <div id="block_private_policy_agreement" style="font-size: 13px">
+        <br>
+        <input type="checkbox" name="private_policy_agreement" id="private_policy_agreement">
+        <span style="padding-left: 5px;">I agree to Terms and <a href="https://m2epro.com/privacy-policy" target="_blank">Privacy Policy</a></span>
+    </div>
 
     <div style="margin-top: 40px">
         <h4>
@@ -166,7 +238,7 @@
 <!-- ### LICENSE EDIT POPUP ### -->
 
 <div id="license_popup_content" style="display: none;">
-    <div style="padding: 10px; height: 250px">
+    <div style="padding: 10px; height: 300px">
         <div class="block_notices_module" title="<?php echo Mage::helper('M2ePro')->__('Please verify the information is valid before we register you with M2E Pro.'); ?>" subtitle="" collapseable="no" hideblock="no" always_show="yes"></div>
 
         <form id="popup_license_form">
@@ -198,6 +270,15 @@
                                 </td>
                                 <td class="value">
                                     <input type="text" name="lastname" class="input-text required-entry" value="" />
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="label">
+                                    <?php echo Mage::helper('M2ePro')->__('Phone') ?>: <span class="required">*</span>
+                                </td>
+                                <td class="value">
+                                    <input type="text" name="phone" class="input-text required-entry" value="" />
                                 </td>
                             </tr>
 

@@ -2,12 +2,12 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Amazon_Search_Settings_ByIdentifier_Responser
-    extends Ess_M2ePro_Model_Connector_Amazon_Search_ByIdentifier_ItemsResponser
+    extends Ess_M2ePro_Model_Amazon_Connector_Search_ByIdentifier_ItemsResponser
 {
     //########################################
 
@@ -21,33 +21,22 @@ class Ess_M2ePro_Model_Amazon_Search_Settings_ByIdentifier_Responser
 
     //########################################
 
-    /**
-     * @param Ess_M2ePro_Model_Processing_Request $processingRequest
-     * @throws Ess_M2ePro_Model_Exception_Logic
-     */
-    public function unsetProcessingLocks(Ess_M2ePro_Model_Processing_Request $processingRequest)
+    public function failDetected($messageText)
     {
-        parent::unsetProcessingLocks($processingRequest);
-
-        $this->getListingProduct()->deleteObjectLocks(NULL, $processingRequest->getHash());
-        $this->getListingProduct()->getListing()->deleteObjectLocks(NULL, $processingRequest->getHash());
-    }
-
-    public function eventFailedExecuting($message)
-    {
-        parent::eventFailedExecuting($message);
+        parent::failDetected($messageText);
 
         $logModel = Mage::getModel('M2ePro/Listing_Log');
         $logModel->setComponentMode(Ess_M2ePro_Helper_Component_Amazon::NICK);
+        $actionId = $logModel->getResource()->getNextActionId();
 
         $logModel->addProductMessage(
             $this->getListingProduct()->getListingId(),
             $this->getListingProduct()->getProductId(),
             $this->getListingProduct()->getId(),
             Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
-            NULL,
+            $actionId,
             Ess_M2ePro_Model_Listing_Log::ACTION_UNKNOWN,
-            $message,
+            $messageText,
             Ess_M2ePro_Model_Log_Abstract::TYPE_ERROR,
             Ess_M2ePro_Model_Log_Abstract::PRIORITY_HIGH
         );
@@ -59,17 +48,21 @@ class Ess_M2ePro_Model_Amazon_Search_Settings_ByIdentifier_Responser
 
     //########################################
 
-    protected function processResponseData($response)
+    protected function processResponseData()
     {
+        $responseData = $this->getPreparedResponseData();
+
         /** @var Ess_M2ePro_Model_Amazon_Search_Settings $settingsSearch */
         $settingsSearch = Mage::getModel('M2ePro/Amazon_Search_Settings');
         $settingsSearch->setListingProduct($this->getListingProduct());
-        $settingsSearch->setStep($this->params['step']);
-        if (!empty($response)) {
-            $settingsSearch->setStepData(array(
-                'params' => $this->params,
-                'result' => $response,
-            ));
+        $settingsSearch->setStep($this->_params['step']);
+        if (!empty($responseData)) {
+            $settingsSearch->setStepData(
+                array(
+                    'params' => $this->_params,
+                    'result' => $responseData,
+                )
+            );
         }
 
         $settingsSearch->process();

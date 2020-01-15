@@ -26,7 +26,7 @@ WizardInstallationEbay = Class.create(CommonHandler, {
             windowClassName: "popup-window",
             title: M2ePro.translator.translate('Register Your M2E Pro Extension'),
             width: 640,
-            height: 315,
+            height: 350,
             zIndex: 100,
             recenterAuto: false,
             hideEffect: Element.hide,
@@ -52,6 +52,8 @@ WizardInstallationEbay = Class.create(CommonHandler, {
 
         this.copyValuesFromPopup();
         this.closePopupAction();
+
+        this.licenseForm.validate();
     },
 
     // ---------------------------------------
@@ -106,7 +108,7 @@ WizardInstallationEbay = Class.create(CommonHandler, {
                 }
 
                 if (!response['url']) {
-                    MagentoMessageObj.addError(M2ePro.translator.translate('An error during of license creation occurred.'));
+                    MagentoMessageObj.addError(M2ePro.translator.translate('An error during of Extension Key creation occurred.'));
                     return CommonHandlerObj.scroll_page_to_top();
                 }
 
@@ -122,6 +124,8 @@ WizardInstallationEbay = Class.create(CommonHandler, {
         if (this.licenseForm.validate()) {
             return true;
         }
+
+        $('edit_license').show();
 
         $('edit_license').simulate('click');
         $('license_popup_confirm_button').click();
@@ -167,44 +171,6 @@ WizardInstallationEbay = Class.create(CommonHandler, {
             self.initAccountSettings();
 
         }, 1000);
-    },
-
-    // Mode
-    // ---------------------------------------
-
-    initAccountMode: function(accountMode)
-    {
-        $(accountMode + '_mode_input').checked = true;
-        $(accountMode + '_mode_label').setStyle({fontWeight: 'bold'});
-    },
-
-    saveAccountMode: function()
-    {
-        var mode = null;
-        Form.getElements($('mode_confirmation_form')).each(function(element) {
-            element.checked && (mode = element.value);
-        });
-
-        MagentoMessageObj.clearAll();
-
-        new Ajax.Request( M2ePro.url.get('adminhtml_wizard_installationEbay/setModeAndUpdateAccount'), {
-            method: 'post',
-            parameters: { mode: mode },
-            onSuccess: function(transport) {
-
-                var response = transport.responseText.evalJSON();
-
-                if (response.result == 'error') {
-                    MagentoMessageObj.addError(response.message);
-                    return CommonHandlerObj.scroll_page_to_top();
-                }
-
-                var stepIndex = WizardHandlerObj.steps.all.indexOf(WizardHandlerObj.steps.current);
-                var nextStepNick = WizardHandlerObj.steps.all[stepIndex + 1];
-
-                WizardHandlerObj.setStep(nextStepNick, setLocation.bind(window, location.href));
-            }
-        });
     }
 
     // ---------------------------------------

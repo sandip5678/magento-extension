@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -41,7 +41,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Payment_Edit_Form_Data extends Ma
 
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_payment');
 
-        if (is_null($template)) {
+        if ($template === null) {
             return '';
         }
 
@@ -54,7 +54,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Payment_Edit_Form_Data extends Ma
     {
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_payment');
 
-        if (is_null($template)) {
+        if ($template === null) {
             return array();
         }
 
@@ -69,11 +69,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Payment_Edit_Form_Data extends Ma
 
     public function getDefault()
     {
-        if (Mage::helper('M2ePro/View_Ebay')->isSimpleMode()) {
-            $default = Mage::getSingleton('M2ePro/Ebay_Template_Payment')->getDefaultSettingsSimpleMode();
-        } else {
-            $default = Mage::getSingleton('M2ePro/Ebay_Template_Payment')->getDefaultSettingsAdvancedMode();
-        }
+        $default = Mage::getSingleton('M2ePro/Ebay_Template_Payment')->getDefaultSettings();
 
         // populate payment fields with the data from magento configuration
         // ---------------------------------------
@@ -86,6 +82,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Payment_Edit_Form_Data extends Ma
             $default['pay_pal_mode'] = 1;
             $default['pay_pal_email_address'] = $payPalConfig->business_account;
         }
+
         // ---------------------------------------
 
         return $default;

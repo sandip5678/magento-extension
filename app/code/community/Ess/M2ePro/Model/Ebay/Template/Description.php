@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 /**
  * @method Ess_M2ePro_Model_Template_Description getParentObject()
- * @method Ess_M2ePro_Model_Mysql4_Ebay_Template_Description getResource()
+ * @method Ess_M2ePro_Model_Resource_Ebay_Template_Description getResource()
  */
 class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Component_Child_Ebay_Abstract
 {
@@ -95,10 +95,12 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
     const WATERMARK_CACHE_TIME = 604800; // 7 days
     const GALLERY_IMAGES_COUNT_MAX = 11;
 
+    const INSTRUCTION_TYPE_MAGENTO_STATIC_BLOCK_IN_DESCRIPTION_CHANGED = 'magento_static_block_in_description_changed';
+
     /**
      * @var Ess_M2ePro_Model_Ebay_Template_Description_Source[]
      */
-    private $descriptionSourceModels = array();
+    protected $_descriptionSourceModels = array();
 
     //########################################
 
@@ -130,14 +132,18 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
 
         return (bool)Mage::getModel('M2ePro/Ebay_Listing')
                             ->getCollection()
-                            ->addFieldToFilter('template_description_mode',
-                                                Ess_M2ePro_Model_Ebay_Template_Manager::MODE_TEMPLATE)
+                            ->addFieldToFilter(
+                                'template_description_mode',
+                                Ess_M2ePro_Model_Ebay_Template_Manager::MODE_TEMPLATE
+                            )
                             ->addFieldToFilter('template_description_id', $this->getId())
                             ->getSize() ||
                (bool)Mage::getModel('M2ePro/Ebay_Listing_Product')
                             ->getCollection()
-                            ->addFieldToFilter('template_description_mode',
-                                                Ess_M2ePro_Model_Ebay_Template_Manager::MODE_TEMPLATE)
+                            ->addFieldToFilter(
+                                'template_description_mode',
+                                Ess_M2ePro_Model_Ebay_Template_Manager::MODE_TEMPLATE
+                            )
                             ->addFieldToFilter('template_description_id', $this->getId())
                             ->getSize();
     }
@@ -154,10 +160,11 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
         if (is_file($watermarkPath)) {
             @unlink($watermarkPath);
         }
+
         // ---------------------------------------
 
         $temp = parent::deleteInstance();
-        $temp && $this->descriptionSourceModels = array();
+        $temp && $this->_descriptionSourceModels = array();
         return $temp;
     }
 
@@ -171,15 +178,15 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
     {
         $productId = $magentoProduct->getProductId();
 
-        if (!empty($this->descriptionSourceModels[$productId])) {
-            return $this->descriptionSourceModels[$productId];
+        if (!empty($this->_descriptionSourceModels[$productId])) {
+            return $this->_descriptionSourceModels[$productId];
         }
 
-        $this->descriptionSourceModels[$productId] = Mage::getModel('M2ePro/Ebay_Template_Description_Source');
-        $this->descriptionSourceModels[$productId]->setMagentoProduct($magentoProduct);
-        $this->descriptionSourceModels[$productId]->setDescriptionTemplate($this->getParentObject());
+        $this->_descriptionSourceModels[$productId] = Mage::getModel('M2ePro/Ebay_Template_Description_Source');
+        $this->_descriptionSourceModels[$productId]->setMagentoProduct($magentoProduct);
+        $this->_descriptionSourceModels[$productId]->setDescriptionTemplate($this->getParentObject());
 
-        return $this->descriptionSourceModels[$productId];
+        return $this->_descriptionSourceModels[$productId];
     }
 
     //########################################
@@ -496,7 +503,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
 
         if (!is_array($productDetails) || !isset($productDetails[$type]) ||
             !isset($productDetails[$type]['mode'])) {
-            return NULL;
+            return null;
         }
 
         return $productDetails[$type]['mode'];
@@ -512,7 +519,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
 
         if (!is_array($productDetails) || !isset($productDetails[$type]) ||
             $this->isProductDetailsModeNone($type) || !isset($productDetails[$type]['attribute'])) {
-            return NULL;
+            return null;
         }
 
         return $productDetails[$type]['attribute'];
@@ -847,7 +854,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function getDecodedVariationConfigurableImages()
     {
-        return json_decode($this->getData('variation_configurable_images'), true);
+        return Mage::helper('M2ePro')->jsonDecode($this->getData('variation_configurable_images'));
     }
 
     /**
@@ -953,7 +960,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkPositionTop()
     {
-        return $this->getWatermarkPosition() == self::WATERMARK_POSITION_TOP;
+        return $this->getWatermarkPosition() === self::WATERMARK_POSITION_TOP;
     }
 
     /**
@@ -961,7 +968,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkPositionMiddle()
     {
-        return $this->getWatermarkPosition() == self::WATERMARK_POSITION_MIDDLE;
+        return $this->getWatermarkPosition() === self::WATERMARK_POSITION_MIDDLE;
     }
 
     /**
@@ -969,7 +976,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkPositionBottom()
     {
-        return $this->getWatermarkPosition() == self::WATERMARK_POSITION_BOTTOM;
+        return $this->getWatermarkPosition() === self::WATERMARK_POSITION_BOTTOM;
     }
 
     // ---------------------------------------
@@ -979,7 +986,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkScaleModeNone()
     {
-        return $this->getWatermarkScaleMode() == self::WATERMARK_SCALE_MODE_NONE;
+        return $this->getWatermarkScaleMode() === self::WATERMARK_SCALE_MODE_NONE;
     }
 
     /**
@@ -987,7 +994,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkScaleModeInWidth()
     {
-        return $this->getWatermarkScaleMode() == self::WATERMARK_SCALE_MODE_IN_WIDTH;
+        return $this->getWatermarkScaleMode() === self::WATERMARK_SCALE_MODE_IN_WIDTH;
     }
 
     /**
@@ -995,7 +1002,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
      */
     public function isWatermarkScaleModeStretch()
     {
-        return $this->getWatermarkScaleMode() == self::WATERMARK_SCALE_MODE_STRETCH;
+        return $this->getWatermarkScaleMode() === self::WATERMARK_SCALE_MODE_STRETCH;
     }
 
     // ---------------------------------------
@@ -1013,42 +1020,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
     /**
      * @return array
      */
-    public function getTrackingAttributes()
-    {
-        return array_unique(array_merge(
-            $this->getTitleAttributes(),
-            $this->getSubTitleAttributes(),
-            $this->getDescriptionAttributes(),
-            $this->getImageMainAttributes(),
-            $this->getGalleryImagesAttributes(),
-            $this->getVariationImagesAttributes()
-        ));
-    }
-
-    /**
-     * @return array
-     */
-    public function getUsedAttributes()
-    {
-        return array_unique(array_merge(
-            $this->getTitleAttributes(),
-            $this->getSubTitleAttributes(),
-            $this->getDescriptionAttributes(),
-            $this->getConditionAttributes(),
-            $this->getConditionNoteAttributes(),
-            $this->getProductDetailAttributes(),
-            $this->getImageMainAttributes(),
-            $this->getGalleryImagesAttributes(),
-            $this->getVariationImagesAttributes()
-        ));
-    }
-
-    //########################################
-
-    /**
-     * @return array
-     */
-    public function getDefaultSettingsSimpleMode()
+    public function getDefaultSettings()
     {
         return array(
 
@@ -1068,16 +1040,18 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
             'condition_note_mode' => self::CONDITION_NOTE_MODE_NONE,
             'condition_note_template' => '',
 
-            'product_details' => json_encode(array(
-                'isbn'  => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
-                'epid'  => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
-                'upc'   => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
-                'ean'   => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
-                'brand' => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
-                'mpn'   => array('mode' => self::PRODUCT_DETAILS_MODE_DOES_NOT_APPLY, 'attribute' => ''),
-                'include_description' => 1,
-                'include_image'       => 1,
-            )),
+            'product_details' => Mage::helper('M2ePro')->jsonEncode(
+                array(
+                    'isbn'  => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
+                    'epid'  => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
+                    'upc'   => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
+                    'ean'   => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
+                    'brand' => array('mode' => self::PRODUCT_DETAILS_MODE_NONE, 'attribute' => ''),
+                    'mpn'   => array('mode' => self::PRODUCT_DETAILS_MODE_DOES_NOT_APPLY, 'attribute' => ''),
+                    'include_description' => 1,
+                    'include_image'       => 1,
+                )
+            ),
 
             'editor_type' => self::EDITOR_TYPE_SIMPLE,
             'cut_long_titles' => self::CUT_LONG_TITLE_ENABLED,
@@ -1088,90 +1062,34 @@ class Ess_M2ePro_Model_Ebay_Template_Description extends Ess_M2ePro_Model_Compon
 
             'image_main_mode' => self::IMAGE_MAIN_MODE_PRODUCT,
             'image_main_attribute' => '',
-            'gallery_images_mode' => self::GALLERY_IMAGES_MODE_PRODUCT,
-            'gallery_images_limit' => 3,
+            'gallery_images_mode' => self::GALLERY_IMAGES_MODE_NONE,
+            'gallery_images_limit' => 0,
             'gallery_images_attribute' => '',
             'variation_images_mode' => self::VARIATION_IMAGES_MODE_PRODUCT,
             'variation_images_limit' => 1,
             'variation_images_attribute' => '',
             'default_image_url' => '',
 
-            'variation_configurable_images' => json_encode(array()),
+            'variation_configurable_images' => Mage::helper('M2ePro')->jsonEncode(array()),
             'use_supersize_images' => self::USE_SUPERSIZE_IMAGES_NO,
 
             'watermark_mode' => self::WATERMARK_MODE_NO,
 
-            'watermark_settings' => json_encode(array(
-                'position' => self::WATERMARK_POSITION_TOP,
-                'scale' => self::WATERMARK_SCALE_MODE_NONE,
-                'transparent' => self::WATERMARK_TRANSPARENT_MODE_NO,
+            'watermark_settings' => Mage::helper('M2ePro')->jsonEncode(
+                array(
+                    'position' => self::WATERMARK_POSITION_TOP,
+                    'scale' => self::WATERMARK_SCALE_MODE_NONE,
+                    'transparent' => self::WATERMARK_TRANSPARENT_MODE_NO,
 
-                'hashes' => array(
-                    'current'  => '',
-                    'previous' => '',
+                    'hashes' => array(
+                        'current'  => '',
+                        'previous' => '',
+                    )
                 )
-            )),
+            ),
 
-            'watermark_image' => NULL
+            'watermark_image' => null
         );
-    }
-
-    /**
-     * @return array
-     */
-    public function getDefaultSettingsAdvancedMode()
-    {
-        $simpleSettings = $this->getDefaultSettingsSimpleMode();
-        $simpleSettings['gallery_images_mode'] = self::GALLERY_IMAGES_MODE_NONE;
-        return $simpleSettings;
-    }
-
-    //########################################
-
-    /**
-     * @param bool $asArrays
-     * @param string|array $columns
-     * @return array
-     */
-    public function getAffectedListingsProducts($asArrays = true, $columns = '*')
-    {
-        $templateManager = Mage::getModel('M2ePro/Ebay_Template_Manager');
-        $templateManager->setTemplate(Ess_M2ePro_Model_Ebay_Template_Manager::TEMPLATE_DESCRIPTION);
-
-        $listingsProducts = $templateManager->getAffectedOwnerObjects(
-            Ess_M2ePro_Model_Ebay_Template_Manager::OWNER_LISTING_PRODUCT, $this->getId(), $asArrays, $columns
-        );
-
-        $listings = $templateManager->getAffectedOwnerObjects(
-            Ess_M2ePro_Model_Ebay_Template_Manager::OWNER_LISTING, $this->getId(), false
-        );
-
-        foreach ($listings as $listing) {
-
-            $tempListingsProducts = $listing->getChildObject()
-                                            ->getAffectedListingsProductsByTemplate(
-                                                Ess_M2ePro_Model_Ebay_Template_Manager::TEMPLATE_DESCRIPTION,
-                                                $asArrays, $columns
-                                            );
-
-            foreach ($tempListingsProducts as $listingProduct) {
-                if (!isset($listingsProducts[$listingProduct['id']])) {
-                    $listingsProducts[$listingProduct['id']] = $listingProduct;
-                }
-            }
-        }
-
-        return $listingsProducts;
-    }
-
-    public function setSynchStatusNeed($newData, $oldData)
-    {
-        $listingsProducts = $this->getAffectedListingsProducts(true, array('id'));
-        if (empty($listingsProducts)) {
-            return;
-        }
-
-        $this->getResource()->setSynchStatusNeed($newData,$oldData,$listingsProducts);
     }
 
     //########################################

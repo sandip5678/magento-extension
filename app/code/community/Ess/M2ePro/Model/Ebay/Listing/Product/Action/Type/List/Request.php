@@ -2,13 +2,35 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
     extends Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_Request
 {
+    protected $_isVerifyCall = false;
+
+    //########################################
+
+    protected function beforeBuildDataEvent()
+    {
+        if ($this->_isVerifyCall) {
+            parent::beforeBuildDataEvent();
+            return;
+        }
+
+        $additionalData = $this->getListingProduct()->getAdditionalData();
+
+        unset($additionalData['synch_template_list_rules_note']);
+        unset($additionalData['item_duplicate_action_required']);
+
+        $this->getListingProduct()->setSettings('additional_data', $additionalData);
+        $this->getListingProduct()->setData('is_duplicate', 0);
+
+        $this->getListingProduct()->save();
+    }
+
     //########################################
 
     /**
@@ -16,28 +38,57 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
      */
     public function getActionData()
     {
-        return array_merge(
+        if (!$uuid = $this->getEbayListingProduct()->getItemUUID()) {
+            $uuid = $this->getEbayListingProduct()->generateItemUUID();
+            $this->getEbayListingProduct()->setData('item_uuid', $uuid)->save();
+        }
+
+        $data = array_merge(
 
             array(
-                'sku' => $this->getEbayListingProduct()->getSku()
+                'sku'       => $this->getSku(),
+                'item_uuid' => $uuid,
             ),
-
-            $this->getRequestVariations()->getData(),
-            $this->getRequestCategories()->getData(),
-
-            $this->getRequestPayment()->getData(),
-            $this->getRequestReturn()->getData(),
-            $this->getRequestShipping()->getData(),
-
-            $this->getRequestSelling()->getData(),
-            $this->getRequestDescription()->getData()
+            $this->getGeneralData(),
+            $this->getQtyData(),
+            $this->getPriceData(),
+            $this->getTitleData(),
+            $this->getSubtitleData(),
+            $this->getDescriptionData(),
+            $this->getImagesData(),
+            $this->getCategoriesData(),
+            $this->getPaymentData(),
+            $this->getReturnData(),
+            $this->getShippingData(),
+            $this->getVariationsData(),
+            $this->getOtherData()
         );
+
+        $this->_isVerifyCall && $data['verify_call'] = true;
+
+        return $data;
     }
 
     //########################################
 
-    public function resetVariations()
+    protected function initializeVariations()
     {
+        if (!$this->getEbayListingProduct()->isVariationMode()) {
+            foreach ($this->getListingProduct()->getVariations(true) as $variation) {
+                $variation->deleteInstance();
+            }
+        }
+
+        parent::initializeVariations();
+
+        if (!$this->getEbayListingProduct()->isVariationMode()) {
+            return;
+        }
+
+        $additionalData = $this->getListingProduct()->getAdditionalData();
+        $additionalData['variations_that_can_not_be_deleted'] = array();
+        $this->getListingProduct()->setSettings('additional_data', $additionalData)->save();
+
         $variations = $this->getListingProduct()->getVariations(true);
 
         foreach ($variations as $variation) {
@@ -67,8 +118,8 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
             }
 
             $additionalData = $variation->getAdditionalData();
-            if (!empty($additionalData['ebay_mpn_value'])) {
-                unset($additionalData['ebay_mpn_value']);
+            if (!empty($additionalData['online_product_details'])) {
+                unset($additionalData['online_product_details']);
                 $variation->setSettings('additional_data', $additionalData);
 
                 $needSave = true;
@@ -78,42 +129,11 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
         }
     }
 
-    public function getTheSameProductAlreadyListed()
-    {
-        $config = Mage::helper('M2ePro/Module')->getConfig()
-                        ->getGroupValue('/ebay/connector/listing/', 'check_the_same_product_already_listed');
-
-        if (!is_null($config) && $config != 1) {
-            return NULL;
-        }
-
-        $listingTable = Mage::getResourceModel('M2ePro/Listing')->getMainTable();
-        $listingProductCollection = Mage::helper('M2ePro/Component_Ebay')->getCollection('Listing_Product');
-
-        $listingProductCollection
-            ->getSelect()
-            ->join(array('l'=>$listingTable),'`main_table`.`listing_id` = `l`.`id`',array());
-
-        $listingProductCollection
-            ->addFieldToFilter('status',array('neq' => Ess_M2ePro_Model_Listing_Product::STATUS_NOT_LISTED))
-            ->addFieldToFilter('product_id',$this->getListingProduct()->getProductId())
-            ->addFieldToFilter('account_id',$this->getAccount()->getId())
-            ->addFieldToFilter('marketplace_id',$this->getMarketplace()->getId());
-
-        $theSameListingProduct = $listingProductCollection->getFirstItem();
-
-        if (!$theSameListingProduct->getId()) {
-            return NULL;
-        }
-
-        return $theSameListingProduct;
-    }
-
     //########################################
 
     protected function getIsEpsImagesMode()
     {
-        return NULL;
+        return null;
     }
 
     //########################################
@@ -122,7 +142,6 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
     {
         if (!$this->getIsVariationItem() || !$this->getMagentoProduct()->isConfigurableType() ||
             empty($data['variations_sets']) || !is_array($data['variations_sets'])) {
-
             return $data;
         }
 
@@ -139,13 +158,12 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
         $replacements = array();
 
         foreach ($this->getEbayListingProduct()->getCategoryTemplate()->getSpecifics(true) as $specific) {
-
             if (!$specific->isItemSpecificsMode() || !$specific->isCustomAttributeValueMode()) {
                 continue;
             }
 
-            $attrCode  = $specific->getData('value_custom_attribute');
-            $attrTitle = $specific->getData('attribute_title');
+            $attrCode  = trim($specific->getData('value_custom_attribute'));
+            $attrTitle = trim($specific->getData('attribute_title'));
 
             if (!array_key_exists($attrCode, $confAttributes) || $confAttributes[$attrCode] == $attrTitle) {
                 continue;
@@ -159,8 +177,7 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
         }
 
         $data = $this->doReplaceVariationSpecifics($data, $replacements);
-
-        $data['variations_specifics_replacements'] = $replacements;
+        $this->addMetaData('variations_specifics_replacements', $replacements);
 
         return $data;
     }
@@ -174,6 +191,14 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_List_Request
         $data['without_mpn_variation_issue'] = true;
 
         return $data;
+    }
+
+    //########################################
+
+    public function setIsVerifyCall($value)
+    {
+        $this->_isVerifyCall = $value;
+        return $this;
     }
 
     //########################################

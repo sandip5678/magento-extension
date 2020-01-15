@@ -2,17 +2,17 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Order_View_Item extends Mage_Adminhtml_Block_Widget_Grid
 {
-    /** @var $order Ess_M2ePro_Model_Order */
-    private $order;
+    /** @var $_order Ess_M2ePro_Model_Order */
+    protected $_order;
 
-    /** @var $taxCalculator Mage_Tax_Model_Calculation */
-    private $taxCalculator;
+    /** @var $_taxCalculator Mage_Tax_Model_Calculation */
+    protected $_taxCalculator;
 
     //########################################
 
@@ -35,19 +35,24 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order_View_Item extends Mage_Adminhtml_Blo
         $this->_defaultLimit = 200;
         // ---------------------------------------
 
-        $this->order = Mage::helper('M2ePro/Data_Global')->getValue('temp_data');
-        $this->taxCalculator = Mage::getSingleton('tax/calculation');
+        $this->_order         = Mage::helper('M2ePro/Data_Global')->getValue('temp_data');
+        $this->_taxCalculator = Mage::getSingleton('tax/calculation');
     }
 
     protected function _prepareCollection()
     {
         $collection = Mage::helper('M2ePro/Component_Ebay')
             ->getCollection('Order_Item')
-            ->addFieldToFilter('order_id', $this->order->getId());
+            ->addFieldToFilter('order_id', $this->_order->getId());
+
+        $stockId = Mage::helper('M2ePro/Magento_Store')->getStockId($this->_order->getStore());
 
         $collection->getSelect()->joinLeft(
-            array('cisi' => Mage::getSingleton('core/resource')->getTableName('cataloginventory_stock_item')),
-            '(cisi.product_id = `main_table`.product_id AND cisi.stock_id = 1)',
+            array(
+                'cisi' => Mage::helper('M2ePro/Module_Database_Structure')
+                    ->getTableNameWithPrefix('cataloginventory_stock_item')
+            ),
+            "(cisi.product_id = `main_table`.product_id AND cisi.stock_id = {$stockId})",
             array('is_in_stock')
         );
 
@@ -58,15 +63,18 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order_View_Item extends Mage_Adminhtml_Blo
 
     protected function _prepareColumns()
     {
-        $this->addColumn('product_id', array(
+        $this->addColumn(
+            'product_id', array(
             'header'    => Mage::helper('M2ePro')->__('Product'),
             'align'     => 'left',
             'width'     => '*',
             'index'     => 'product_id',
             'frame_callback' => array($this, 'callbackColumnProduct')
-        ));
+            )
+        );
 
-        $this->addColumn('stock_availability', array(
+        $this->addColumn(
+            'stock_availability', array(
             'header'=> Mage::helper('M2ePro')->__('Stock Availability'),
             'width' => '100px',
             'index' => 'is_in_stock',
@@ -78,49 +86,60 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Order_View_Item extends Mage_Adminhtml_Blo
                 0 => Mage::helper('M2ePro')->__('Out of Stock')
             ),
             'frame_callback' => array($this, 'callbackColumnStockAvailability')
-        ));
+            )
+        );
 
-        $this->addColumn('original_price', array(
+        $this->addColumn(
+            'original_price', array(
             'header'    => Mage::helper('M2ePro')->__('Original Price'),
             'align'     => 'left',
             'width'     => '80px',
             'filter'    => false,
             'sortable'  => false,
             'frame_callback' => array($this, 'callbackColumnOriginalPrice')
-        ));
+            )
+        );
 
-        $this->addColumn('price', array(
+        $this->addColumn(
+            'qty_sold', array(
+            'header'    => Mage::helper('M2ePro')->__('QTY'),
+            'align'     => 'left',
+            'width'     => '80px',
+            'index'     => 'qty_purchased'
+            )
+        );
+
+        $this->addColumn(
+            'price', array(
             'header'    => Mage::helper('M2ePro')->__('Price'),
             'align'     => 'left',
             'width'     => '80px',
             'index'     => 'price',
             'frame_callback' => array($this, 'callbackColumnPrice')
-        ));
+            )
+        );
 
-        $this->addColumn('qty_sold', array(
-            'header'    => Mage::helper('M2ePro')->__('QTY'),
-            'align'     => 'left',
-            'width'     => '80px',
-            'index'     => 'qty_purchased'
-        ));
-
-        $this->addColumn('tax_percent', array(
+        $this->addColumn(
+            'tax_percent', array(
             'header'         => Mage::helper('M2ePro')->__('Tax Percent'),
             'align'          => 'left',
             'width'          => '80px',
             'filter'         => false,
             'sortable'       => false,
             'frame_callback' => array($this, 'callbackColumnTaxPercent')
-        ));
+            )
+        );
 
-        $this->addColumn('row_total', array(
+        $this->addColumn(
+            'row_total', array(
             'header'    => Mage::helper('M2ePro')->__('Row Total'),
             'align'     => 'left',
             'width'     => '80px',
             'filter'    => false,
             'sortable'  => false,
             'frame_callback' => array($this, 'callbackColumnRowTotal')
-        ));
+            )
+        );
 
         return parent::_prepareColumns();
     }
@@ -156,8 +175,8 @@ HTML;
 
         $itemUrl = Mage::helper('M2ePro/Component_Ebay')->getItemUrl(
             $row->getItemId(),
-            $this->order->getAccount()->getChildObject()->getMode(),
-            $this->order->getMarketplaceId()
+            $this->_order->getAccount()->getChildObject()->getMode(),
+            $this->_order->getMarketplaceId()
         );
 
         $itemLink = '<a href="'.$itemUrl.'" target="_blank">'.Mage::helper('M2ePro')->__('View on eBay').'</a>';
@@ -165,7 +184,12 @@ HTML;
         $productLink = '';
 
         if ($productId = $row->getData('product_id')) {
-            $productUrl = $this->getUrl('adminhtml/catalog_product/edit', array('id' => $productId));
+            $productUrl = $this->getUrl(
+                'adminhtml/catalog_product/edit', array(
+                'id'    => $productId,
+                'store' => $row->getOrder()->getStoreId()
+                )
+            );
             $productLink .= ' | <a href="'.$productUrl.'" target="_blank">'.Mage::helper('M2ePro')->__('View').'</a>';
         }
 
@@ -179,8 +203,7 @@ HTML;
         $gridId = $this->getId();
 
         $editLink = '';
-        if (!$row->getProductId() || $row->getMagentoProduct()->hasRequiredOptions()) {
-
+        if (!$row->getProductId() || $row->getMagentoProduct()->isProductWithVariations()) {
             if (!$row->getProductId()) {
                 $action = Mage::helper('M2ePro')->__('Map to Magento Product');
             } else {
@@ -217,7 +240,7 @@ HTML;
 
     public function callbackColumnStockAvailability($value, $row, $column, $isExport)
     {
-        if (is_null($row->getData('is_in_stock'))) {
+        if ($row->getData('is_in_stock') === null) {
             return Mage::helper('M2ePro')->__('N/A');
         }
 
@@ -230,7 +253,7 @@ HTML;
 
     public function callbackColumnOriginalPrice($value, $row, $column, $isExport)
     {
-        $formattedPrice = '0';
+        $formattedPrice = Mage::helper('M2ePro')->__('N/A');
 
         $product = $row->getProduct();
 
@@ -245,9 +268,9 @@ HTML;
                     ->load(array_shift($associatedProducts))
                     ->getPrice();
 
-                $formattedPrice = $this->order->getStore()->formatPrice($price);
+                $formattedPrice = $this->_order->getStore()->formatPrice($price);
             } else {
-                $formattedPrice = $this->order->getStore()->formatPrice($row->getProduct()->getPrice());
+                $formattedPrice = $this->_order->getStore()->formatPrice($row->getProduct()->getPrice());
             }
         }
 
@@ -257,7 +280,7 @@ HTML;
     public function callbackColumnPrice($value, $row, $column, $isExport)
     {
         return Mage::getSingleton('M2ePro/Currency')->formatPrice(
-            $this->order->getChildObject()->getCurrency(), $row->getData('price')
+            $this->_order->getChildObject()->getCurrency(), $row->getData('price')
         );
     }
 
@@ -268,7 +291,7 @@ HTML;
             return '0%';
         }
 
-        $taxDetails = json_decode($taxDetails, true);
+        $taxDetails = Mage::helper('M2ePro')->jsonDecode($taxDetails);
         if (empty($taxDetails)) {
             return '0%';
         }
@@ -282,7 +305,7 @@ HTML;
 
         $taxDetails = $row->getData('tax_details');
         if (!empty($taxDetails)) {
-            $taxDetails = json_decode($row->getData('tax_details'), true);
+            $taxDetails = Mage::helper('M2ePro')->jsonDecode($row->getData('tax_details'));
 
             if (!empty($taxDetails['amount'])) {
                 $total += $taxDetails['amount'];
@@ -290,7 +313,7 @@ HTML;
         }
 
         return Mage::getSingleton('M2ePro/Currency')->formatPrice(
-            $this->order->getChildObject()->getCurrency(), $total
+            $this->_order->getChildObject()->getCurrency(), $total
         );
     }
 

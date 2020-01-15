@@ -2,47 +2,72 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 abstract class Ess_M2ePro_Block_Adminhtml_Switcher extends Mage_Adminhtml_Block_Template
 {
-    protected $template = 'M2ePro/switcher.phtml';
+    protected $_template = 'M2ePro/switcher.phtml';
 
-    protected $itemsIds = array();
+    protected $_items;
 
-    protected $paramName = '';
+    protected $_itemsIds = array();
 
-    protected $hasDefaultOption = true;
+    protected $_paramName = '';
+
+    protected $_hasDefaultOption = true;
 
     //########################################
 
     public function __construct()
     {
         parent::__construct();
-        $this->setTemplate($this->template);
+        $this->setTemplate($this->_template);
     }
 
     //########################################
 
     abstract public function getLabel();
 
-    abstract public function getItems();
+    abstract protected function loadItems();
+
+    //########################################
+
+    public function getItems()
+    {
+        if ($this->_items === null) {
+            $this->loadItems();
+        }
+
+        return $this->_items;
+    }
+
+    public function isEmpty()
+    {
+        $items = $this->getItems();
+        return empty($items);
+    }
+
+    //########################################
 
     public function getSwitchUrl()
     {
         $controllerName = $this->getData('controller_name') ? $this->getData('controller_name') : '*';
-        return $this->getUrl(
-            "*/{$controllerName}/*",
-            array('_current' => true, $this->getParamName() => $this->getParamPlaceHolder())
-        );
+        $actionName     = $this->getData('action_name') ? $this->getData('action_name') : '*';
+
+        $params = $this->getData('action_params') ? $this->getData('action_params') : array();
+
+        $params['_current'] = true;
+        $params[$this->getParamName()] = $this->getParamPlaceHolder();
+
+        return $this->getUrl("*/{$controllerName}/{$actionName}", $params);
     }
 
     public function getSwitchCallback()
     {
         $callback = 'switch';
-        $callback .= ucfirst($this->paramName);
+        $callback .= ucfirst($this->_paramName);
 
         return $callback;
     }
@@ -56,7 +81,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Switcher extends Mage_Adminhtml_Block_
 
     public function getParamName()
     {
-        return $this->paramName;
+        return $this->_paramName;
     }
 
     public function getParamPlaceHolder()
@@ -71,12 +96,19 @@ abstract class Ess_M2ePro_Block_Adminhtml_Switcher extends Mage_Adminhtml_Block_
 
     //########################################
 
-    public function hasDefaultOption()
+    public function hasDefaultOption($hasDefaultOption = null)
     {
-        return (bool)$this->hasDefaultOption;
+        if (null !== $hasDefaultOption) {
+            $this->_hasDefaultOption = $hasDefaultOption;
+        }
+
+        return (bool)$this->_hasDefaultOption;
     }
 
-    abstract public function getDefaultOptionName();
+    public function getDefaultOptionName()
+    {
+        return $this->__('All');
+    }
 
     public function getDefaultOptionValue()
     {

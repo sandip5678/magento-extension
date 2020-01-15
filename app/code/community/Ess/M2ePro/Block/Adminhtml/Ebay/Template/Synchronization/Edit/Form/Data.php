@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -14,31 +14,50 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Synchronization_Edit_Form_Data ex
     {
         parent::__construct();
 
-        // Initialization block
-        // ---------------------------------------
         $this->setId('ebayTemplateSynchronizationEditFormData');
-        // ---------------------------------------
-
         $this->setTemplate('M2ePro/ebay/template/synchronization/form/data.phtml');
     }
 
+    //########################################
+
     protected function _beforeToHtml()
     {
-        $this->setChild('ebay_template_synchronization_edit_form_tabs_list', $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_list'
-        ));
-        $this->setChild('ebay_template_synchronization_edit_form_tabs_relist', $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_relist'
-        ));
-        $this->setChild('ebay_template_synchronization_edit_form_tabs_revise', $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_revise'
-        ));
-        $this->setChild('ebay_template_synchronization_edit_form_tabs_stop', $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_stop'
-        ));
-        $this->setChild('ebay_template_synchronization_edit_form_tabs_schedule', $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_schedule'
-        ));
+        $this->setChild(
+            'ebay_template_synchronization_edit_form_tabs_list', $this->getLayout()->createBlock(
+                'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_list',
+                '',
+                array(
+                    'form_data' => $this->getFormData()
+                )
+            )
+        );
+        $this->setChild(
+            'ebay_template_synchronization_edit_form_tabs_relist', $this->getLayout()->createBlock(
+                'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_relist',
+                '',
+                array(
+                    'form_data' => $this->getFormData()
+                )
+            )
+        );
+        $this->setChild(
+            'ebay_template_synchronization_edit_form_tabs_revise', $this->getLayout()->createBlock(
+                'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_revise',
+                '',
+                array(
+                    'form_data' => $this->getFormData()
+                )
+            )
+        );
+        $this->setChild(
+            'ebay_template_synchronization_edit_form_tabs_stop', $this->getLayout()->createBlock(
+                'M2ePro/adminhtml_ebay_template_synchronization_edit_form_tabs_stop',
+                '',
+                array(
+                    'form_data' => $this->getFormData()
+                )
+            )
+        );
 
         return parent::_beforeToHtml();
     }
@@ -62,7 +81,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Synchronization_Edit_Form_Data ex
 
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_synchronization');
 
-        if (is_null($template)) {
+        if ($template === null) {
             return '';
         }
 
@@ -75,13 +94,11 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Synchronization_Edit_Form_Data ex
     {
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_synchronization');
 
-        if (is_null($template) || is_null($template->getId())) {
+        if ($template === null || $template->getId() === null) {
             return array();
         }
 
-        $data = $template->getData();
-
-        return $data;
+        return $template->getData();
     }
 
     //########################################

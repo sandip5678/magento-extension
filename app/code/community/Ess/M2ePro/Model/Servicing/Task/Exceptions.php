@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -33,36 +33,40 @@ class Ess_M2ePro_Model_Servicing_Task_Exceptions extends Ess_M2ePro_Model_Servic
         $data = $this->prepareAndCheckReceivedData($data);
 
         Mage::helper('M2ePro/Module')->getConfig()->setGroupValue(
-            '/debug/exceptions/','filters_mode',(int)$data['is_filter_enable']
+            '/debug/exceptions/', 'filters_mode', (int)$data['is_filter_enable']
         );
         Mage::helper('M2ePro/Module')->getConfig()->setGroupValue(
-            '/debug/fatal_error/','send_to_server',(int)$data['send_to_server']['fatal']
+            '/debug/fatal_error/', 'send_to_server', (int)$data['send_to_server']['fatal']
         );
         Mage::helper('M2ePro/Module')->getConfig()->setGroupValue(
-            '/debug/exceptions/','send_to_server',(int)$data['send_to_server']['exception']
+            '/debug/exceptions/', 'send_to_server', (int)$data['send_to_server']['exception']
         );
 
         /**  @var $registryModel Ess_M2ePro_Model_Registry */
         $registryModel = Mage::getModel('M2ePro/Registry')->load('/exceptions_filters/', 'key');
 
-        $registryModel->addData(array(
+        $registryModel->addData(
+            array(
             'key' => '/exceptions_filters/',
-            'value' => json_encode($data['filters'])
-        ))->save();
+            'value' => Mage::helper('M2ePro')->jsonEncode($data['filters'])
+            )
+        )->save();
     }
 
     //########################################
 
-    private function prepareAndCheckReceivedData($data)
+    protected function prepareAndCheckReceivedData($data)
     {
         // Send To Server
         // ---------------------------------------
         if (!isset($data['send_to_server']['fatal']) || !is_bool($data['send_to_server']['fatal'])) {
             $data['send_to_server']['fatal'] = true;
         }
+
         if (!isset($data['send_to_server']['exception']) || !is_bool($data['send_to_server']['exception'])) {
             $data['send_to_server']['exception'] = true;
         }
+
         // ---------------------------------------
 
         // Exceptions Filters
@@ -84,9 +88,8 @@ class Ess_M2ePro_Model_Servicing_Task_Exceptions extends Ess_M2ePro_Model_Servic
         );
 
         foreach ($data['filters'] as $filter) {
-
             if (!isset($filter['preg_match']) || $filter['preg_match'] == '' ||
-                !in_array($filter['type'],$allowedFilterTypes)) {
+                !in_array($filter['type'], $allowedFilterTypes)) {
                 continue;
             }
 

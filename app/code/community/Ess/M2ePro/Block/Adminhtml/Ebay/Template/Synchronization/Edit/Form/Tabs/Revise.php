@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -27,9 +27,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Synchronization_Edit_Form_Tabs_Re
 
     public function getDefault()
     {
-        return Mage::helper('M2ePro/View_Ebay')->isSimpleMode()
-            ? Mage::getSingleton('M2ePro/Ebay_Template_Synchronization')->getReviseDefaultSettingsSimpleMode()
-            : Mage::getSingleton('M2ePro/Ebay_Template_Synchronization')->getReviseDefaultSettingsAdvancedMode();
+        return Mage::getSingleton('M2ePro/Ebay_Template_Synchronization')->getReviseDefaultSettings();
     }
 
     //########################################

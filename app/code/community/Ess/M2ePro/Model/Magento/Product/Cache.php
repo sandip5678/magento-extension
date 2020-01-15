@@ -2,36 +2,38 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Product
 {
-    private $isCacheEnabled = false;
+    protected $_isCacheEnabled = false;
 
     //########################################
 
     public function getCacheValue($key)
     {
-        $key = sha1('magento_product_'.$this->getProductId().'_'.$this->getStoreId().'_'.json_encode($key));
-        return Mage::helper('M2ePro/Data_Cache_Session')->getValue($key);
+        $key = Mage::helper('M2ePro')->jsonEncode($key);
+        $key = sha1('magento_product_'.$this->getProductId().'_'.$this->getStoreId().'_'.$key);
+        return Mage::helper('M2ePro/Data_Cache_Runtime')->getValue($key);
     }
 
     public function setCacheValue($key, $value)
     {
-        $key = sha1('magento_product_'.$this->getProductId().'_'.$this->getStoreId().'_'.json_encode($key));
+        $key = Mage::helper('M2ePro')->jsonEncode($key);
+        $key = sha1('magento_product_'.$this->getProductId().'_'.$this->getStoreId().'_'.$key);
         $tags = array(
             'magento_product',
             'magento_product_'.$this->getProductId().'_'.$this->getStoreId()
         );
 
-        return Mage::helper('M2ePro/Data_Cache_Session')->setValue($key, $value, $tags);
+        return Mage::helper('M2ePro/Data_Cache_Runtime')->setValue($key, $value, $tags);
     }
 
     public function clearCache()
     {
-        return Mage::helper('M2ePro/Data_Cache_Session')->removeTagValues(
+        return Mage::helper('M2ePro/Data_Cache_Runtime')->removeTagValues(
             'magento_product_'.$this->getProductId().'_'.$this->getStoreId()
         );
     }
@@ -43,7 +45,7 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
      */
     public function isCacheEnabled()
     {
-        return $this->isCacheEnabled;
+        return $this->_isCacheEnabled;
     }
 
     /**
@@ -51,7 +53,7 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
      */
     public function enableCache()
     {
-        $this->isCacheEnabled = true;
+        $this->_isCacheEnabled = true;
         return $this;
     }
 
@@ -60,7 +62,7 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
      */
     public function disableCache()
     {
-        $this->isCacheEnabled = false;
+        $this->_isCacheEnabled = false;
         return $this;
     }
 
@@ -165,18 +167,18 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
 
     //########################################
 
-    public function getThumbnailImageLink()
+    public function getThumbnailImage()
     {
         return $this->getMethodData(__FUNCTION__);
     }
 
-    public function getImageLink($attribute = 'image')
+    public function getImage($attribute = 'image')
     {
         $args = func_get_args();
         return $this->getMethodData(__FUNCTION__, $args);
     }
 
-    public function getGalleryImagesLinks($limitImages = 0)
+    public function getGalleryImages($limitImages = 0)
     {
         $args = func_get_args();
         return $this->getMethodData(__FUNCTION__, $args);
@@ -184,16 +186,9 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
 
     //########################################
 
-    public function hasRequiredOptions()
-    {
-        return $this->getMethodData(__FUNCTION__);
-    }
-
-    // ---------------------------------------
-
     public function getVariationInstance()
     {
-        if (!is_null($this->_variationInstance)) {
+        if ($this->_variationInstance !== null) {
             return $this->_variationInstance;
         }
 
@@ -210,17 +205,17 @@ class Ess_M2ePro_Model_Magento_Product_Cache extends Ess_M2ePro_Model_Magento_Pr
             $methodName,
         );
 
-        if (!is_null($params)) {
+        if ($params !== null) {
             $cacheKey[] = $params;
         }
 
         $cacheResult = $this->getCacheValue($cacheKey);
 
-        if ($this->isCacheEnabled() && !is_null($cacheResult)) {
+        if ($this->isCacheEnabled() && $cacheResult !== null) {
             return $cacheResult;
         }
 
-        if (!is_null($params)) {
+        if ($params !== null) {
             $data = call_user_func_array(array('parent', $methodName), $params);
         } else {
             $data = call_user_func(array('parent', $methodName));

@@ -2,16 +2,18 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
     extends Mage_Adminhtml_Controller_Action
 {
-    protected $generalBlockWasAppended = false;
+    protected $_generalBlockWasAppended = false;
 
-    protected $pageHelpLink = NULL;
+    protected $_pageHelpLink = null;
+
+    protected $_isUnAuthorized = false;
 
     //########################################
 
@@ -27,23 +29,25 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
 
     //########################################
 
-    protected function setPageHelpLink($component = NULL, $article = NULL)
+    protected function setPageHelpLink($component = null, $article = null, $tinyLink = null)
     {
-        $this->pageHelpLink = Mage::helper('M2ePro/Module_Support')->getDocumentationUrl($component, $article);
+        $this->_pageHelpLink = Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(
+            $component, $article, $tinyLink
+        );
     }
 
     protected function getPageHelpLink()
     {
-        if (is_null($this->pageHelpLink)) {
+        if ($this->_pageHelpLink === null) {
             return Mage::helper('M2ePro/Module_Support')->getDocumentationUrl();
         }
 
-        return $this->pageHelpLink;
+        return $this->_pageHelpLink;
     }
 
     //########################################
 
-    public function preDispatch()
+    final public function preDispatch()
     {
         parent::preDispatch();
 
@@ -57,55 +61,75 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
          * The code below is the logical extension of the method \Ess_M2ePro_Controller_Router::addModule.
          */
         // -----------------------------------------------------------------
-        if (!$this->getRequest()->isDispatched() &&
-            !Mage::getSingleton('admin/session')->isLoggedIn() &&
-            $this->getRequest()->getActionName() == 'login') {
+        if (!Mage::getSingleton('admin/session')->isLoggedIn()) {
+            $this->_isUnAuthorized = true;
 
-            return $this->_redirect('M2ePro/index/index/');
+            $this->setFlag('', self::FLAG_NO_DISPATCH, true);
+            $this->setFlag('', self::FLAG_NO_POST_DISPATCH, true);
+            $this->setFlag('', self::FLAG_NO_PRE_DISPATCH, true);
+
+            if ($this->getRequest()->isXmlHttpRequest()) {
+                return $this->getResponse()->setBody(
+                    json_encode(
+                        array(
+                        'ajaxExpired'  => 1,
+                        'ajaxRedirect' => Mage::getBaseUrl()
+                        )
+                    )
+                );
+            }
+
+            if (Mage::helper('M2ePro/Module')->isProductionEnvironment()) {
+                return $this->getResponse()->setRedirect(Mage::getBaseUrl());
+            }
         }
+
         // -----------------------------------------------------------------
 
-        // client was logged out
-        if ($this->getRequest()->isXmlHttpRequest() &&
-            !Mage::getSingleton('admin/session')->isLoggedIn()) {
-
-            exit(json_encode(array(
-                'ajaxExpired' => 1,
-                'ajaxRedirect' => $this->_getRefererUrl()
-            )));
+        if (Mage::helper('M2ePro/Module_Maintenance')->isEnabled()) {
+            return $this->_redirect('*/adminhtml_maintenance');
         }
 
-        // flag controller loaded
-        if (is_null(Mage::helper('M2ePro/Data_Global')->getValue('is_base_controller_loaded'))) {
-            Mage::helper('M2ePro/Data_Global')->setValue('is_base_controller_loaded',true);
+        if (Mage::helper('M2ePro/Module')->isDisabled()) {
+            return $this->_redirect('adminhtml/dashboard');
         }
+
+        if (Mage::helper('M2ePro/Component')->getEnabledComponents() === array()) {
+            return $this->_redirect('adminhtml/dashboard');
+        }
+
+        Mage::helper('M2ePro/Module_Exception')->setFatalErrorHandler();
+
+        // flag that controller is loaded
+        if (Mage::helper('M2ePro/Data_Global')->getValue('is_base_controller_loaded') === null) {
+            Mage::helper('M2ePro/Data_Global')->setValue('is_base_controller_loaded', true);
+        }
+
+        $this->_preDispatch();
 
         return $this;
     }
 
-    public function dispatch($action)
+    final public function dispatch($action)
     {
         try {
-
-            Mage::helper('M2ePro/Module_Exception')->setFatalErrorHandler();
             parent::dispatch($action);
-
         } catch (Exception $exception) {
+            if ($this->_isUnAuthorized) {
+                throw $exception;
+            }
 
             if ($this->getRequest()->getControllerName() ==
                 Mage::helper('M2ePro/Module_Support')->getPageControllerName()) {
-                exit($exception->getMessage());
+                return $this->getResponse()->setBody($exception->getMessage());
             } else {
-
                 if (Mage::helper('M2ePro/Module')->isDevelopmentEnvironment()) {
                     throw $exception;
                 } else {
-
                     Mage::helper('M2ePro/Module_Exception')->process($exception);
 
                     if (($this->getRequest()->isGet() || $this->getRequest()->isPost()) &&
                         !$this->getRequest()->isXmlHttpRequest()) {
-
                         $this->_getSession()->addError(
                             Mage::helper('M2ePro/Module_Exception')->getUserMessage($exception)
                         );
@@ -114,17 +138,41 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
                             'error' => 'true'
                         );
 
-                        if (!is_null(Mage::helper('M2ePro/View')->getCurrentView())) {
+                        if (Mage::helper('M2ePro/View')->getCurrentView() !== null) {
                             $params['referrer'] = Mage::helper('M2ePro/View')->getCurrentView();
                         }
 
                         $this->_redirect(Mage::helper('M2ePro/Module_Support')->getPageRoute(), $params);
                     } else {
-                        exit($exception->getMessage());
+                        return $this->getResponse()->setBody($exception->getMessage());
                     }
                 }
             }
         }
+    }
+
+    final public function postDispatch()
+    {
+        parent::postDispatch();
+
+        if ($this->_isUnAuthorized) {
+            return;
+        }
+
+        $this->_postDispatch();
+    }
+
+    //########################################
+
+    protected function _preDispatch()
+    {
+        return null;
+    }
+
+    protected function _postDispatch()
+    {
+        // Removes garbage from the response's body
+        ob_get_clean();
     }
 
     //########################################
@@ -133,7 +181,31 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
     {
         $customLayout = Ess_M2ePro_Helper_View::LAYOUT_NICK;
         is_array($ids) ? $ids[] = $customLayout : $ids = array('default',$customLayout);
-        return parent::loadLayout($ids, $generateBlocks, $generateXml);
+
+        $layout = parent::loadLayout($ids, $generateBlocks, $generateXml);
+
+        /** Messages must be added after layout was initialized */
+        if (Mage::helper('M2ePro/Module')->isDisabled()) {
+            $message = Mage::helper('M2ePro')->__(
+                <<<HTML
+                M2E Pro is disabled. Inventory and Order synchronization is not running at this moment.
+                At any time, you can enable the Module under <b>System > Configuration > M2E Pro > Advanced.</b>
+HTML
+            );
+            $this->_getSession()->addError($message);
+        }
+
+        if (Mage::helper('M2ePro/Component')->getEnabledComponents() === array()) {
+            $message = Mage::helper('M2ePro')->__(
+                <<<HTML
+                Channel Integrations are disabled. To start working with M2E Pro, please go to 
+                <b>System > Configuration > M2E Pro > Channels</b> and enable at least one Channel Integration.
+HTML
+            );
+            $this->_getSession()->addError($message);
+        }
+
+        return $layout;
     }
 
     // ---------------------------------------
@@ -152,11 +224,35 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
         return $this->addContent($block);
     }
 
+    protected function _addAjaxContent($content)
+    {
+        $blockGeneral = Mage::helper('M2ePro/View')->getGeneralBlock();
+        $blockGeneral->setPageHelpLink($this->getPageHelpLink());
+
+        return $this->getResponse()->setBody($blockGeneral->toHtml() . $content);
+    }
+
+    protected function _addJsonContent(array $content)
+    {
+        return $this->getResponse()->setBody(Mage::helper('M2ePro')->jsonEncode($content));
+    }
+
+    protected function _addRawContent($content)
+    {
+        return $this->getResponse()->setBody($content);
+    }
+
     // ---------------------------------------
 
-    protected function beforeAddLeftEvent() {}
+    protected function beforeAddLeftEvent()
+    {
+        return null;
+    }
 
-    protected function beforeAddContentEvent() {}
+    protected function beforeAddContentEvent()
+    {
+        return null;
+    }
 
     //########################################
 
@@ -170,20 +266,21 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
         $id = $this->getRequest()->getParam('id');
         $ids = $this->getRequest()->getParam('ids');
 
-        if (is_null($id) && is_null($ids)) {
+        if ($id === null && $ids === null) {
             return array();
         }
 
         $requestIds = array();
 
-        if (!is_null($ids)) {
+        if ($ids !== null) {
             if (is_string($ids)) {
                 $ids = explode(',', $ids);
             }
+
             $requestIds = (array)$ids;
         }
 
-        if (!is_null($id)) {
+        if ($id !== null) {
             $requestIds[] = $id;
         }
 
@@ -230,16 +327,15 @@ abstract class Ess_M2ePro_Controller_Adminhtml_BaseController
 
     protected function appendGeneralBlock(Mage_Core_Block_Abstract $block)
     {
-        if ($this->generalBlockWasAppended) {
+        if ($this->_generalBlockWasAppended) {
             return;
         }
 
-        $generalBlockPath = Ess_M2ePro_Helper_View::GENERAL_BLOCK_PATH;
-        $blockGeneral = $this->getLayout()->createBlock($generalBlockPath);
-        $blockGeneral->setData('page_help_link', $this->getPageHelpLink());
+        $blockGeneral = Mage::helper('M2ePro/View')->getGeneralBlock();
+        $blockGeneral->setPageHelpLink($this->getPageHelpLink());
 
         $block->append($blockGeneral);
-        $this->generalBlockWasAppended = true;
+        $this->_generalBlockWasAppended = true;
     }
 
     protected function addLeft(Mage_Core_Block_Abstract $block)

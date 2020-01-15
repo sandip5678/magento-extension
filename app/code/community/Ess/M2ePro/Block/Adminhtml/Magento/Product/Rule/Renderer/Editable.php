@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -41,7 +41,7 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Product_Rule_Renderer_Editable
         if ($element->getShowAsText()) {
             $html = ' <input type="hidden" class="hidden" id="' . $element->getHtmlId()
                 . '" name="' . $element->getName() . '" value="' . $element->getValue() . '"/> '
-                . htmlspecialchars($valueName) . '&nbsp;';
+                . htmlspecialchars($valueName, ENT_COMPAT, 'UTF-8') . '&nbsp;';
         } else {
             $html = ' <span class="rule-param"'
                 . ($element->getParamId() ? ' id="' . $element->getParamId() . '"' : '') . '>'

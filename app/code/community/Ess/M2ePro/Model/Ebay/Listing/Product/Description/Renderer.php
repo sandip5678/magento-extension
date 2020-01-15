@@ -2,14 +2,39 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
 {
-    /* @var Ess_M2ePro_Model_Ebay_Listing_Product */
-    protected $listingProduct = NULL;
+    const MODE_FULL = 1;
+    const MODE_PREVIEW = 2;
+
+    protected $_renderMode = self::MODE_FULL;
+
+    //########################################
+
+    /**
+     * @return int
+     */
+    public function getRenderMode()
+    {
+        return $this->_renderMode;
+    }
+
+    /**
+     * @param int $renderMode
+     */
+    public function setRenderMode($renderMode)
+    {
+        $this->_renderMode = $renderMode;
+    }
+
+    //########################################
+
+    /** @var Ess_M2ePro_Model_Ebay_Listing_Product */
+    protected $listingProduct = null;
 
     //########################################
 
@@ -43,15 +68,25 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
 
         $replaces = array();
         foreach ($matches[1] as $i => $attributeCode) {
-            $method = 'get'.implode(array_map('ucfirst',explode('_', $attributeCode)));
+            $method = 'get'.implode(array_map('ucfirst', explode('_', $attributeCode)));
 
-            $arg = NULL;
-            if (preg_match('/(?<=\[)(\d+?)(?=\])/',$method,$tempMatch)) {
+            $arg = null;
+            if (preg_match('/(?<=\[)(\d+?)(?=\])/', $method, $tempMatch)) {
                 $arg = $tempMatch[0];
-                $method = str_replace('['.$arg.']','',$method);
+                $method = str_replace('['.$arg.']', '', $method);
             }
 
-            method_exists($this,$method) && $replaces[$matches[0][$i]] = $this->$method($arg);
+            $value = '';
+            method_exists($this, $method) && $value = $this->$method($arg);
+
+            if (in_array($attributeCode, array('fixed_price', 'start_price', 'reserve_price', 'buyitnow_price'))) {
+                $value = round($value, 2);
+                $storeId = $this->listingProduct->getMagentoProduct()->getStoreId();
+                $store = \Mage::app()->getStore($storeId);
+                $value = $store->formatPrice($value, false);
+            }
+
+            ($value !== '') && $replaces[$matches[0][$i]] = $value;
         }
 
         $text = str_replace(array_keys($replaces), array_values($replaces), $text);
@@ -82,7 +117,6 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
         }
 
         if ($this->listingProduct->isVariationsReady()) {
-
             $pricesList = array();
 
             foreach ($this->listingProduct->getVariations(true) as $variation) {
@@ -90,8 +124,7 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
                 $pricesList[] = $variation->getChildObject()->getPrice();
             }
 
-            $price = count($pricesList) > 0 ? min($pricesList) : 0;
-
+            $price = !empty($pricesList) ? min($pricesList) : 0;
         } else {
             $price = $this->listingProduct->getFixedPrice();
         }
@@ -195,7 +228,7 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
 
     protected function getHandlingTime()
     {
-        $handlingTime = $this->listingProduct->getShippingTemplate()->getDispatchTime();
+        $handlingTime = $this->listingProduct->getShippingTemplateSource()->getDispatchTime();
 
         $result = Mage::helper('M2ePro')->__('Business Day');
 
@@ -354,14 +387,15 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
         $coreResource = Mage::getSingleton('core/resource');
         $connRead = $coreResource->getConnection('core_read');
 
-        $tableDictShipping = $coreResource->getTableName('m2epro_ebay_dictionary_shipping');
+        $tableDictShipping = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_ebay_dictionary_shipping');
 
         // table m2epro_ebay_dictionary_marketplace
         $dbSelect = $connRead
             ->select()
-            ->from($tableDictShipping,'title')
-            ->where('`ebay_id` = ?',$service->getShippingValue())
-            ->where('`marketplace_id` = ?',(int)$this->listingProduct->getMarketplace()->getId());
+            ->from($tableDictShipping, 'title')
+            ->where('`ebay_id` = ?', $service->getShippingValue())
+            ->where('`marketplace_id` = ?', (int)$this->listingProduct->getMarketplace()->getId());
 
         $shippingMethod = $dbSelect->query()->fetchColumn();
 
@@ -424,16 +458,17 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
         $connRead = $coreResource->getConnection('core_read');
 
         // ---------------------------------------
-        $tableDictShipping = $coreResource->getTableName('m2epro_ebay_dictionary_shipping');
+        $tableDictShipping = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_ebay_dictionary_shipping');
         // ---------------------------------------
 
         // table m2epro_ebay_dictionary_marketplace
         // ---------------------------------------
         $dbSelect = $connRead
             ->select()
-            ->from($tableDictShipping,'title')
-            ->where('`ebay_id` = ?',$service->getShippingValue())
-            ->where('`marketplace_id` = ?',(int)$this->listingProduct->getMarketplace()->getId());
+            ->from($tableDictShipping, 'title')
+            ->where('`ebay_id` = ?', $service->getShippingValue())
+            ->where('`marketplace_id` = ?', (int)$this->listingProduct->getMarketplace()->getId());
 
         $shippingMethod = $dbSelect->query()->fetchColumn();
 
@@ -476,6 +511,40 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Description_Renderer
         }
 
         return sprintf('%01.2f', $cost);
+    }
+
+    //########################################
+
+    protected function getMainImage()
+    {
+        if ($this->_renderMode === self::MODE_FULL) {
+            $mainImage = $this->listingProduct->getDescriptionTemplateSource()->getMainImage();
+        } else {
+            $mainImage = $this->listingProduct->getMagentoProduct()->getImage('image');
+        }
+
+        return !empty($mainImage) ? $mainImage->getUrl() : '';
+    }
+
+    protected function getGalleryImage($index)
+    {
+        if ($this->_renderMode === self::MODE_FULL) {
+            $images = array_values($this->listingProduct->getDescriptionTemplateSource()->getGalleryImages());
+        } else {
+            $images = array_values($this->listingProduct->getMagentoProduct()->getGalleryImages(11));
+
+            if ($index <= 0) {
+                return '';
+            }
+
+            $index--;
+        }
+
+        if (!empty($images[$index]) && $images[$index]->getUrl()) {
+            return $images[$index]->getUrl();
+        }
+
+        return '';
     }
 
     //########################################

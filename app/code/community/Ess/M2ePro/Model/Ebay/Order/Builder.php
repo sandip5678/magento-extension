@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -17,52 +17,42 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
     const UPDATE_COMPLETED_SHIPPING = 'completed_shipping';
     const UPDATE_BUYER_MESSAGE      = 'buyer_message';
     const UPDATE_PAYMENT_DATA       = 'payment_data';
+    const UPDATE_SHIPPING_TAX_DATA  = 'shipping_tax_data';
+    const UPDATE_ITEMS_COUNT        = 'items_count';
     const UPDATE_EMAIL              = 'email';
 
-    //########################################
-
-    // M2ePro_TRANSLATIONS
-    // Payment status was updated to Paid on eBay.
-    // Shipping status was updated to Shipped on eBay.
-    // Buyer has changed the shipping address of this order at the time of completing payment on eBay.
-    // Duplicated eBay Orders with ID #%id%.
-    // Order Creation Rules were not met. Press Create Order Button at Order View Page to create it anyway.
-    // Magento Order #%order_id% should be canceled as new combined eBay Order #%new_id% was created.
-    // eBay Order #%old_id% was deleted as new combined Order #%new_id% was created.
-
-    //########################################
-
-    /** @var $helper Ess_M2ePro_Model_Ebay_Order_Helper */
-    private $helper = NULL;
+    /** @var $_helper Ess_M2ePro_Model_Ebay_Order_Helper */
+    protected $_helper = null;
 
     /** @var $order Ess_M2ePro_Model_Account */
-    private $account = NULL;
+    protected $_account = null;
 
-    /** @var $order Ess_M2ePro_Model_Order */
-    private $order = NULL;
+    /** @var $_order Ess_M2ePro_Model_Order */
+    protected $_order = null;
 
-    private $items = array();
+    protected $_items = array();
 
-    private $externalTransactions = array();
+    protected $_externalTransactions = array();
 
-    private $status = self::STATUS_NOT_MODIFIED;
+    protected $_status = self::STATUS_NOT_MODIFIED;
 
-    private $updates = array();
+    protected $_updates = array();
 
-    private $relatedOrders = array();
+    /** @var Ess_M2ePro_Model_Order[] $_relatedOrders */
+    protected $_relatedOrders = array();
 
     //########################################
 
     public function __construct()
     {
-        $this->helper = Mage::getSingleton('M2ePro/Ebay_Order_Helper');
+        $this->_helper = Mage::getSingleton('M2ePro/Ebay_Order_Helper');
     }
 
     //########################################
 
     public function initialize(Ess_M2ePro_Model_Account $account, array $data = array())
     {
-        $this->account = $account;
+        $this->_account = $account;
 
         $this->initializeData($data);
         $this->initializeMarketplace();
@@ -74,13 +64,13 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
     protected function initializeData(array $data = array())
     {
         // ---------------------------------------
-        $this->setData('account_id', $this->account->getId());
+        $this->setData('account_id', $this->_account->getId());
 
         $this->setData('ebay_order_id', $data['identifiers']['ebay_order_id']);
         $this->setData('selling_manager_id', $data['identifiers']['selling_manager_id']);
 
-        $this->setData('order_status', $this->helper->getOrderStatus($data['statuses']['order']));
-        $this->setData('checkout_status', $this->helper->getCheckoutStatus($data['statuses']['checkout']));
+        $this->setData('order_status', $this->_helper->getOrderStatus($data['statuses']['order']));
+        $this->setData('checkout_status', $this->_helper->getCheckoutStatus($data['statuses']['checkout']));
 
         $this->setData('purchase_update_date', $data['purchase_update_date']);
         $this->setData('purchase_create_date', $data['purchase_create_date']);
@@ -96,6 +86,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         } else {
             $this->setData('tax_details', $data['selling']['tax_details']);
         }
+
         // ---------------------------------------
 
         // ---------------------------------------
@@ -107,12 +98,12 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->externalTransactions = $data['payment']['external_transactions'];
+        $this->_externalTransactions = $data['payment']['external_transactions'];
         unset($data['payment']['external_transactions']);
 
         $this->setData('payment_details', $data['payment']);
 
-        $paymentStatus = $this->helper->getPaymentStatus(
+        $paymentStatus = $this->_helper->getPaymentStatus(
             $data['payment']['method'], $data['payment']['date'], $data['payment']['status']
         );
         $this->setData('payment_status', $paymentStatus);
@@ -121,23 +112,23 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         // ---------------------------------------
         $this->setData('shipping_details', $data['shipping']);
 
-        $shippingStatus = $this->helper->getShippingStatus(
+        $shippingStatus = $this->_helper->getShippingStatus(
             $data['shipping']['date'], !empty($data['shipping']['service'])
         );
         $this->setData('shipping_status', $shippingStatus);
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->items = $data['items'];
+        $this->_items = $data['items'];
         // ---------------------------------------
     }
 
     //########################################
 
-    private function initializeMarketplace()
+    protected function initializeMarketplace()
     {
         // Get first order item
-        $item = reset($this->items);
+        $item = reset($this->_items);
 
         if (empty($item['site'])) {
             return;
@@ -146,12 +137,12 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         $shippingDetails = $this->getData('shipping_details');
         $paymentDetails = $this->getData('payment_details');
 
-        $marketplace = Mage::helper('M2ePro/Component_Ebay')->getCachedObject('Marketplace',$item['site'], 'code');
+        $marketplace = Mage::helper('M2ePro/Component_Ebay')->getCachedObject('Marketplace', $item['site'], 'code');
 
-        $shippingDetails['service'] = $this->helper->getShippingServiceNameByCode(
+        $shippingDetails['service'] = $this->_helper->getShippingServiceNameByCode(
             $shippingDetails['service'], $marketplace->getId()
         );
-        $paymentDetails['method'] = $this->helper->getPaymentMethodNameByCode(
+        $paymentDetails['method'] = $this->_helper->getPaymentMethodNameByCode(
             $paymentDetails['method'], $marketplace->getId()
         );
 
@@ -162,13 +153,13 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     //########################################
 
-    private function initializeOrder()
+    protected function initializeOrder()
     {
-        $this->status = self::STATUS_NOT_MODIFIED;
+        $this->_status = self::STATUS_NOT_MODIFIED;
 
         $existOrders = Mage::helper('M2ePro/Component_Ebay')
             ->getCollection('Order')
-            ->addFieldToFilter('account_id', $this->account->getId())
+            ->addFieldToFilter('account_id', $this->_account->getId())
             ->addFieldToFilter('ebay_order_id', $this->getData('ebay_order_id'))
             ->setOrder('id', Varien_Data_Collection_Db::SORT_ORDER_DESC)
             ->getItems();
@@ -177,24 +168,24 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         // New order
         // ---------------------------------------
         if ($existOrdersNumber == 0) {
-            $this->status = self::STATUS_NEW;
-            $this->order = Mage::helper('M2ePro/Component_Ebay')->getModel('Order');
-            $this->order->setStatusUpdateRequired(true);
+            $this->_status = self::STATUS_NEW;
+            $this->_order  = Mage::helper('M2ePro/Component_Ebay')->getModel('Order');
+            $this->_order->setStatusUpdateRequired(true);
 
             if ($this->isCombined()) {
-                $this->relatedOrders = Mage::getResourceModel('M2ePro/Ebay_Order')->getOrdersContainingItemsFromOrder(
-                    $this->account->getId(), $this->items
+                $this->_relatedOrders = Mage::getResourceModel('M2ePro/Ebay_Order')->getOrdersContainingItemsFromOrder(
+                    $this->_account->getId(), $this->_items
                 );
             }
 
             return;
         }
+
         // ---------------------------------------
 
         // duplicated M2ePro orders. remove M2E Pro order without magento order id or newest order
         // ---------------------------------------
         if ($existOrdersNumber > 1) {
-
             $isDeleted = false;
 
             foreach ($existOrders as $key => $order) {
@@ -216,16 +207,18 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
                 $orderForRemove->deleteInstance();
             }
         }
+
         // ---------------------------------------
 
         // Already exist order
         // ---------------------------------------
-        $this->order = reset($existOrders);
-        $this->status = self::STATUS_UPDATED;
+        $this->_order  = reset($existOrders);
+        $this->_status = self::STATUS_UPDATED;
 
-        if (is_null($this->order->getMagentoOrderId())) {
-            $this->order->setStatusUpdateRequired(true);
+        if ($this->_order->getMagentoOrderId() === null) {
+            $this->_order->setStatusUpdateRequired(true);
         }
+
         // ---------------------------------------
     }
 
@@ -234,7 +227,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
     public function process()
     {
         if (!$this->canCreateOrUpdateOrder()) {
-            return NULL;
+            return null;
         }
 
         $this->checkUpdates();
@@ -242,6 +235,22 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         $this->createOrUpdateOrder();
         $this->createOrUpdateItems();
         $this->createOrUpdateExternalTransactions();
+
+        $finalFee = $this->_order->getChildObject()->getFinalFee();
+        $magentoOrder = $this->_order->getMagentoOrder();
+
+        if (!empty($finalFee) && !empty($magentoOrder) && $magentoOrder->getPayment()) {
+            $paymentAdditionalData = Mage::helper('M2ePro')->unserialize(
+                $magentoOrder->getPayment()->getAdditionalData()
+            );
+            if (!empty($paymentAdditionalData)) {
+                $paymentAdditionalData['channel_final_fee'] = $finalFee;
+                $magentoOrder->getPayment()->setAdditionalData(
+                    Mage::helper('M2ePro')->serialize($paymentAdditionalData)
+                );
+                $magentoOrder->getPayment()->save();
+            }
+        }
 
         if ($this->isNew()) {
             $this->processNew();
@@ -252,25 +261,25 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
             $this->processMagentoOrderUpdates();
         }
 
-        return $this->order;
+        return $this->_order;
     }
 
     //########################################
 
-    private function createOrUpdateItems()
+    protected function createOrUpdateItems()
     {
-        $itemsCollection = $this->order->getItemsCollection();
+        $itemsCollection = $this->_order->getItemsCollection();
         $itemsCollection->load();
 
-        foreach ($this->items as $itemData) {
-            $itemData['order_id'] = $this->order->getId();
+        foreach ($this->_items as $itemData) {
+            $itemData['order_id'] = $this->_order->getId();
 
             /** @var $itemBuilder Ess_M2ePro_Model_Ebay_Order_Item_Builder */
             $itemBuilder = Mage::getModel('M2ePro/Ebay_Order_Item_Builder');
             $itemBuilder->initialize($itemData);
 
             $item = $itemBuilder->process();
-            $item->setOrder($this->order);
+            $item->setOrder($this->_order);
 
             $itemsCollection->removeItemByKey($item->getId());
             $itemsCollection->addItem($item);
@@ -279,20 +288,20 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     //########################################
 
-    private function createOrUpdateExternalTransactions()
+    protected function createOrUpdateExternalTransactions()
     {
-        $externalTransactionsCollection = $this->order->getChildObject()->getExternalTransactionsCollection();
+        $externalTransactionsCollection = $this->_order->getChildObject()->getExternalTransactionsCollection();
         $externalTransactionsCollection->load();
 
-        foreach ($this->externalTransactions as $transactionData) {
-            $transactionData['order_id'] = $this->order->getId();
+        foreach ($this->_externalTransactions as $transactionData) {
+            $transactionData['order_id'] = $this->_order->getId();
 
             /** @var $transactionBuilder Ess_M2ePro_Model_Ebay_Order_ExternalTransaction_Builder */
             $transactionBuilder = Mage::getModel('M2ePro/Ebay_Order_ExternalTransaction_Builder');
             $transactionBuilder->initialize($transactionData);
 
             $transaction = $transactionBuilder->process();
-            $transaction->setOrder($this->order);
+            $transaction->setOrder($this->_order);
 
             $externalTransactionsCollection->removeItemByKey($transaction->getId());
             $externalTransactionsCollection->addItem($transaction);
@@ -314,7 +323,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
      */
     public function isSingle()
     {
-        return count($this->items) == 1;
+        return count($this->_items) == 1;
     }
 
     /**
@@ -322,14 +331,14 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
      */
     public function isCombined()
     {
-        return count($this->items) > 1;
+        return count($this->_items) > 1;
     }
 
     // ---------------------------------------
 
-    private function hasExternalTransactions()
+    protected function hasExternalTransactions()
     {
-        return count($this->externalTransactions) > 0;
+        return !empty($this->_externalTransactions);
     }
 
     // ---------------------------------------
@@ -339,7 +348,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
      */
     public function isNew()
     {
-        return $this->status == self::STATUS_NEW;
+        return $this->_status == self::STATUS_NEW;
     }
 
     /**
@@ -347,18 +356,18 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
      */
     public function isUpdated()
     {
-        return $this->status == self::STATUS_UPDATED;
+        return $this->_status == self::STATUS_UPDATED;
     }
 
     //########################################
 
-    private function canCreateOrUpdateOrder()
+    protected function canCreateOrUpdateOrder()
     {
         if ($this->isNew() && $this->isRefund()) {
             return false;
         }
 
-        if (empty($this->relatedOrders)) {
+        if (empty($this->_relatedOrders)) {
             return true;
         }
 
@@ -372,11 +381,11 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
             return false;
         }
 
-        if (count($this->relatedOrders) == 1) {
+        if (count($this->_relatedOrders) == 1) {
             /** @var Ess_M2ePro_Model_Order $relatedOrder */
-            $relatedOrder = reset($this->relatedOrders);
+            $relatedOrder = reset($this->_relatedOrders);
 
-            if ($relatedOrder->getItemsCollection()->getSize() == count($this->items)) {
+            if ($relatedOrder->getItemsCollection()->getSize() == count($this->_items)) {
                 return false;
             }
         }
@@ -387,21 +396,27 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
     /**
      * @return Ess_M2ePro_Model_Order
      */
-    private function createOrUpdateOrder()
+    protected function createOrUpdateOrder()
     {
         $this->prepareShippingAddress();
 
-        $this->setData('tax_details', json_encode($this->getData('tax_details')));
-        $this->setData('shipping_details', json_encode($this->getData('shipping_details')));
-        $this->setData('payment_details', json_encode($this->getData('payment_details')));
+        $this->setData('tax_details', Mage::helper('M2ePro')->jsonEncode($this->getData('tax_details')));
+        $this->setData('shipping_details', Mage::helper('M2ePro')->jsonEncode($this->getData('shipping_details')));
+        $this->setData('payment_details', Mage::helper('M2ePro')->jsonEncode($this->getData('payment_details')));
 
-        $this->order->addData($this->getData());
-        $this->order->save();
+        $this->_order->addData($this->getData());
+        $this->_order->save();
 
-        $this->order->setAccount($this->account);
+        $this->_order->setAccount($this->_account);
+
+        if ($this->getData('order_status') == Ess_M2ePro_Model_Ebay_Order::ORDER_STATUS_CANCELLED &&
+            $this->_order->getReserve()->isPlaced()
+        ) {
+            $this->_order->getReserve()->cancel();
+        }
     }
 
-    private function prepareShippingAddress()
+    protected function prepareShippingAddress()
     {
         $shippingDetails = $this->getData('shipping_details');
         $shippingAddress = $shippingDetails['address'];
@@ -429,7 +444,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     //########################################
 
-    private function processNew()
+    protected function processNew()
     {
         if (!$this->isNew()) {
             return;
@@ -440,104 +455,123 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         }
 
         /** @var $ebayAccount Ess_M2ePro_Model_Ebay_Account */
-        $ebayAccount = $this->account->getChildObject();
+        $ebayAccount = $this->_account->getChildObject();
 
-        if ($this->order->hasListingItems() && !$ebayAccount->isMagentoOrdersListingsModeEnabled()) {
+        if ($this->_order->hasListingItems() && !$ebayAccount->isMagentoOrdersListingsModeEnabled()) {
             return;
         }
 
-        if ($this->order->hasOtherListingItems() && !$ebayAccount->isMagentoOrdersListingsOtherModeEnabled()) {
+        if ($this->_order->hasOtherListingItems() && !$ebayAccount->isMagentoOrdersListingsOtherModeEnabled()) {
             return;
         }
 
-        if (!$this->order->getChildObject()->canCreateMagentoOrder()) {
-            $this->order->addWarningLog('Magento Order was not created. Reason: %msg%', array(
+        if (!$this->_order->getChildObject()->canCreateMagentoOrder()) {
+            $this->_order->addWarningLog(
+                'Magento Order was not created. Reason: %msg%', array(
                 'msg' => 'Order Creation Rules were not met. ' .
                          'Press Create Order Button at Order View Page to create it anyway.'
-            ));
+                )
+            );
             return;
         }
     }
 
-    private function processOrdersContainingItemsFromCurrentOrder()
+    protected function processOrdersContainingItemsFromCurrentOrder()
     {
         /** @var $log Ess_M2ePro_Model_Order_Log */
         $log = Mage::getModel('M2ePro/Order_Log');
         $log->setComponentMode(Ess_M2ePro_Helper_Component_Ebay::NICK);
 
-        foreach ($this->relatedOrders as $order) {
+        foreach ($this->_relatedOrders as $order) {
             if ($order->canCancelMagentoOrder()) {
                 $description = 'Magento Order #%order_id% should be canceled '.
                            'as new combined eBay order #%new_id% was created.';
-                $description = $log->encodeDescription($description, array(
+                $description = Mage::helper('M2ePro/Module_Log')->encodeDescription(
+                    $description, array(
                     '!order_id' => $order->getMagentoOrder()->getRealOrderId(),
-                    '!new_id' => $this->order->getData('ebay_order_id')
-                ));
+                    '!new_id' => $this->_order->getData('ebay_order_id')
+                    )
+                );
 
-                $log->addMessage(null, $description, Ess_M2ePro_Model_Log_Abstract::TYPE_WARNING);
+                $log->addMessage($order->getId(), $description, Ess_M2ePro_Model_Log_Abstract::TYPE_WARNING);
 
                 try {
                     $order->cancelMagentoOrder();
-                } catch (Exception $e) {}
+                } catch (Exception $e) {
+                }
             }
 
             if ($order->getReserve()->isPlaced()) {
                 $order->getReserve()->release();
             }
 
-            $orderId = $order->getData('ebay_order_id');
-            $order->deleteInstance();
-
             $description = 'eBay Order #%old_id% was deleted as new combined eBay order #%new_id% was created.';
-            $description = $log->encodeDescription($description, array(
-                '!old_id' => $orderId,
-                '!new_id' => $this->order->getData('ebay_order_id')
-            ));
+            $description = Mage::helper('M2ePro/Module_Log')->encodeDescription(
+                $description, array(
+                '!old_id' => $order->getData('ebay_order_id'),
+                '!new_id' => $this->_order->getData('ebay_order_id')
+                )
+            );
 
-            $log->addMessage(null, $description, Ess_M2ePro_Model_Log_Abstract::TYPE_WARNING);
+            $log->addMessage($order->getId(), $description, Ess_M2ePro_Model_Log_Abstract::TYPE_WARNING);
+
+            $order->deleteInstance();
         }
     }
 
     //########################################
 
-    private function checkUpdates()
+    protected function checkUpdates()
     {
         if (!$this->isUpdated()) {
             return;
         }
 
         if ($this->hasUpdatedCompletedCheckout()) {
-            $this->updates[] = self::UPDATE_COMPLETED_CHECKOUT;
+            $this->_updates[] = self::UPDATE_COMPLETED_CHECKOUT;
         }
+
         if ($this->hasUpdatedBuyerMessage()) {
-            $this->updates[] = self::UPDATE_BUYER_MESSAGE;
+            $this->_updates[] = self::UPDATE_BUYER_MESSAGE;
         }
+
         if ($this->hasUpdatedCompletedPayment()) {
-            $this->updates[] = self::UPDATE_COMPLETED_PAYMENT;
+            $this->_updates[] = self::UPDATE_COMPLETED_PAYMENT;
         }
+
         if ($this->hasUpdatedPaymentData()) {
-            $this->updates[] = self::UPDATE_PAYMENT_DATA;
+            $this->_updates[] = self::UPDATE_PAYMENT_DATA;
         }
+
+        if ($this->hasUpdatedShippingTaxData()) {
+            $this->_updates[] = self::UPDATE_SHIPPING_TAX_DATA;
+        }
+
         if ($this->hasUpdatedCompletedShipping()) {
-            $this->updates[] = self::UPDATE_COMPLETED_SHIPPING;
+            $this->_updates[] = self::UPDATE_COMPLETED_SHIPPING;
         }
+
+        if ($this->hasUpdatedItemsCount()) {
+            $this->_updates[] = self::UPDATE_ITEMS_COUNT;
+        }
+
         if ($this->hasUpdatedEmail()) {
-            $this->updates[] = self::UPDATE_EMAIL;
+            $this->_updates[] = self::UPDATE_EMAIL;
         }
     }
 
     // ---------------------------------------
 
-    private function hasUpdatedCompletedCheckout()
+    protected function hasUpdatedCompletedCheckout()
     {
-        if (!$this->isUpdated() || $this->order->getChildObject()->isCheckoutCompleted()) {
+        if (!$this->isUpdated() || $this->_order->getChildObject()->isCheckoutCompleted()) {
             return false;
         }
 
         return $this->getData('checkout_status') == Ess_M2ePro_Model_Ebay_Order::CHECKOUT_STATUS_COMPLETED;
     }
 
-    private function hasUpdatedBuyerMessage()
+    protected function hasUpdatedBuyerMessage()
     {
         if (!$this->isUpdated()) {
             return false;
@@ -547,14 +581,14 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
             return false;
         }
 
-        return $this->getData('buyer_message') != $this->order->getChildObject()->getBuyerMessage();
+        return $this->getData('buyer_message') != $this->_order->getChildObject()->getBuyerMessage();
     }
 
     // ---------------------------------------
 
-    private function hasUpdatedCompletedPayment()
+    protected function hasUpdatedCompletedPayment()
     {
-        if (!$this->isUpdated() || $this->order->getChildObject()->isPaymentCompleted()) {
+        if (!$this->isUpdated() || $this->_order->getChildObject()->isPaymentCompleted()) {
             return false;
         }
 
@@ -563,9 +597,9 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     // ---------------------------------------
 
-    private function hasUpdatedCompletedShipping()
+    protected function hasUpdatedCompletedShipping()
     {
-        if (!$this->isUpdated() || $this->order->getChildObject()->isShippingCompleted()) {
+        if (!$this->isUpdated() || $this->_order->getChildObject()->isShippingCompleted()) {
             return false;
         }
 
@@ -574,14 +608,14 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     // ---------------------------------------
 
-    private function hasUpdatedPaymentData()
+    protected function hasUpdatedPaymentData()
     {
         if (!$this->isUpdated()) {
             return false;
         }
 
         /** @var $ebayOrder Ess_M2ePro_Model_Ebay_Order */
-        $ebayOrder = $this->order->getChildObject();
+        $ebayOrder = $this->_order->getChildObject();
         $paymentDetails = $this->getData('payment_details');
 
         if ($ebayOrder->getPaymentMethod() != $paymentDetails['method']) {
@@ -595,16 +629,53 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         return false;
     }
 
+    protected function hasUpdatedShippingTaxData()
+    {
+        if (!$this->isUpdated()) {
+            return false;
+        }
+
+        /** @var $ebayOrder Ess_M2ePro_Model_Ebay_Order */
+        $ebayOrder = $this->_order->getChildObject();
+        $shippingDetails = $this->getData('shipping_details');
+        $taxDetails      = $this->getData('tax_details');
+
+        if (!empty($shippingDetails['price']) && $shippingDetails['price'] != $ebayOrder->getShippingPrice() ||
+            !empty($shippingDetails['service']) && $shippingDetails['service'] != $ebayOrder->getShippingService())
+        {
+            return true;
+        }
+
+        if ((!empty($taxDetails['rate']) && $taxDetails['rate'] != $ebayOrder->getTaxRate()) ||
+            (!empty($taxDetails['amount']) && $taxDetails['amount'] != $ebayOrder->getTaxAmount()))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     // ---------------------------------------
 
-    private function hasUpdatedEmail()
+    protected function hasUpdatedItemsCount()
+    {
+        if (!$this->isUpdated()) {
+            return false;
+        }
+
+        return count($this->_items) != $this->_order->getItemsCollection()->getSize();
+    }
+
+    // ---------------------------------------
+
+    protected function hasUpdatedEmail()
     {
         if (!$this->isUpdated()) {
             return false;
         }
 
         $newEmail = $this->getData('buyer_email');
-        $oldEmail = $this->order->getData('buyer_email');
+        $oldEmail = $this->_order->getData('buyer_email');
 
         if ($newEmail == $oldEmail) {
             return false;
@@ -615,46 +686,58 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
 
     //########################################
 
-    private function hasUpdates()
+    protected function hasUpdates()
     {
-        return !empty($this->updates);
+        return !empty($this->_updates);
     }
 
-    private function hasUpdate($update)
+    protected function hasUpdate($update)
     {
-        return in_array($update, $this->updates);
+        return in_array($update, $this->_updates);
     }
 
-    private function processOrderUpdates()
+    protected function processOrderUpdates()
     {
         if (!$this->hasUpdates()) {
             return;
         }
 
         if ($this->hasUpdate(self::UPDATE_COMPLETED_CHECKOUT)) {
-            $this->order->addSuccessLog('Buyer has completed checkout on eBay.');
-            $this->order->setStatusUpdateRequired(true);
+            $this->_order->addSuccessLog('Buyer has completed checkout on eBay.');
+            $this->_order->setStatusUpdateRequired(true);
         }
 
         if ($this->hasUpdate(self::UPDATE_COMPLETED_PAYMENT)) {
-            $this->order->addSuccessLog('Payment status was updated to Paid on eBay.');
-            $this->order->setStatusUpdateRequired(true);
+            $this->_order->addSuccessLog('Payment status was updated to Paid on eBay.');
+            $this->_order->setStatusUpdateRequired(true);
         }
 
         if ($this->hasUpdate(self::UPDATE_COMPLETED_SHIPPING)) {
-            $this->order->addSuccessLog('Shipping status was updated to Shipped on eBay.');
-            $this->order->setStatusUpdateRequired(true);
+            $this->_order->addSuccessLog('Shipping status was updated to Shipped on eBay.');
+            $this->_order->setStatusUpdateRequired(true);
+        }
+
+        if ($this->hasUpdate(self::UPDATE_SHIPPING_TAX_DATA) && $this->_order->getMagentoOrderId()) {
+            $message  = 'Attention! Shipping/Tax details have been modified on the channel. ';
+            $message .= 'Magento order is already created and cannot be updated to reflect these changes.';
+            $this->_order->addWarningLog($message);
+        }
+
+        if ($this->hasUpdate(self::UPDATE_ITEMS_COUNT) && $this->_order->getMagentoOrderId()) {
+            $message  = 'Attention! The number of ordered Items has been modified on the channel. ';
+            $message .= 'Magento order is already created and cannot be updated to reflect these changes.';
+            $this->_order->addWarningLog($message);
         }
     }
 
-    private function processMagentoOrderUpdates()
+    protected function processMagentoOrderUpdates()
     {
         if (!$this->hasUpdates()) {
             return;
         }
 
-        $magentoOrder = $this->order->getMagentoOrder();
-        if (is_null($magentoOrder)) {
+        $magentoOrder = $this->_order->getMagentoOrder();
+        if ($magentoOrder === null) {
             return;
         }
 
@@ -662,8 +745,8 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         $magentoOrderUpdater = Mage::getModel('M2ePro/Magento_Order_Updater');
         $magentoOrderUpdater->setMagentoOrder($magentoOrder);
 
-        $proxy = $this->order->getProxy();
-        $proxy->setStore($this->order->getStore());
+        $proxy = $this->_order->getProxy();
+        $proxy->setStore($this->_order->getStore());
 
         if ($this->hasUpdate(self::UPDATE_PAYMENT_DATA)) {
             $magentoOrderUpdater->updatePaymentData($proxy->getPaymentData());
@@ -679,7 +762,7 @@ class Ess_M2ePro_Model_Ebay_Order_Builder extends Mage_Core_Model_Abstract
         }
 
         if ($this->hasUpdate(self::UPDATE_EMAIL)) {
-            $magentoOrderUpdater->updateCustomerEmail($this->order->getChildObject()->getBuyerEmail());
+            $magentoOrderUpdater->updateCustomerEmail($this->_order->getChildObject()->getBuyerEmail());
         }
 
         $magentoOrderUpdater->finishUpdate();

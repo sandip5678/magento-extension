@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Form extends Mage_Adminhtml_Block_Widget_Form
 {
-    protected $listing;
+    protected $_listing;
 
     //########################################
 
@@ -28,12 +28,14 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Form extends M
 
     protected function _prepareForm()
     {
-        $form = new Varien_Data_Form(array(
+        $form = new Varien_Data_Form(
+            array(
             'id'      => 'edit_form',
             'action'  => $this->getUrl('*/*/save'),
             'method'  => 'post',
             'enctype' => 'multipart/form-data'
-        ));
+            )
+        );
 
         $form->setUseContainer(true);
         $this->setForm($form);
@@ -67,9 +69,9 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Form extends M
     public function getDefault()
     {
         return array(
-            'id' => NULL,
-            'title' => NULL,
-            'category_id' => NULL,
+            'id' => null,
+            'title' => null,
+            'category_id' => null,
             'adding_mode' => Ess_M2ePro_Model_Listing::ADDING_MODE_NONE,
             'adding_add_not_visible' => Ess_M2ePro_Model_Listing::AUTO_ADDING_ADD_NOT_VISIBLE_YES,
             'deleting_mode' => Ess_M2ePro_Model_Listing::DELETING_MODE_NONE,
@@ -101,12 +103,12 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Form extends M
      */
     public function getListing()
     {
-        if (is_null($this->listing)) {
-            $listingId = $this->getRequest()->getParam('listing_id');
-            $this->listing = Mage::helper('M2ePro/Component')->getCachedUnknownObject('Listing', $listingId);
+        if ($this->_listing === null) {
+            $listingId      = $this->getRequest()->getParam('listing_id');
+            $this->_listing = Mage::helper('M2ePro/Component')->getCachedUnknownObject('Listing', $listingId);
         }
 
-        return $this->listing;
+        return $this->_listing;
     }
 
     //########################################

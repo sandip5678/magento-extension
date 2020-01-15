@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -25,7 +25,17 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_AccountMarketplace
 
         // Set header text
         // ---------------------------------------
-        $this->_headerText = Mage::helper('M2ePro')->__('Creating A New M2E Pro Listing');
+        if (!Mage::helper('M2ePro/Component')->isSingleActiveComponent()) {
+            $componentName = Mage::helper('M2ePro/Component_Ebay')->getTitle();
+
+            $this->_headerText = Mage::helper('M2ePro')->__(
+                '%component_name% / Creating A New M2E Pro Listing',
+                $componentName
+            );
+        } else {
+            $this->_headerText = Mage::helper('M2ePro')->__('Creating A New M2E Pro Listing');
+        }
+
         // ---------------------------------------
 
         // Set buttons actions
@@ -39,18 +49,12 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_AccountMarketplace
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->_addButton('video_tutorial', array(
-            'label'     => Mage::helper('M2ePro')->__('Show Video Tutorial'),
-            'class'     => 'button_link',
-            'onclick'   => 'VideoTutorialHandlerObj.openPopUp();'
-        ));
-        // ---------------------------------------
-
-        // ---------------------------------------
-        $this->_addButton('next', array(
+        $this->_addButton(
+            'next', array(
             'label'     => Mage::helper('M2ePro')->__('Next Step'),
             'class'     => 'scalable next next_step_button'
-        ));
+            )
+        );
         // ---------------------------------------
     }
 

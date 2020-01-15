@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -11,21 +11,21 @@ abstract class Ess_M2ePro_Model_Order_Proxy
     const CHECKOUT_GUEST    = 'guest';
     const CHECKOUT_REGISTER = 'register';
 
-    /** @var $order Ess_M2ePro_Model_Ebay_Order|Ess_M2ePro_Model_Amazon_Order|Ess_M2ePro_Model_Buy_Order */
-    protected $order = NULL;
+    /** @var Ess_M2ePro_Model_Ebay_Order|Ess_M2ePro_Model_Amazon_Order|Ess_M2ePro_Model_Walmart_Order */
+    protected $_order;
 
-    protected $items = NULL;
+    protected $_items;
 
-    /** @var $store Mage_Core_Model_Store */
-    protected $store = NULL;
+    /** @var Mage_Core_Model_Store */
+    protected $_store;
 
-    protected $addressData = array();
+    protected $_addressData = array();
 
     //########################################
 
     public function __construct(Ess_M2ePro_Model_Component_Child_Abstract $order)
     {
-        $this->order = $order;
+        $this->_order = $order;
     }
 
     //########################################
@@ -35,10 +35,10 @@ abstract class Ess_M2ePro_Model_Order_Proxy
      */
     public function getItems()
     {
-        if (is_null($this->items)) {
+        if ($this->_items === null) {
             $items = array();
 
-            foreach ($this->order->getParentObject()->getItemsCollection()->getItems() as $item) {
+            foreach ($this->_order->getParentObject()->getItemsCollection()->getItems() as $item) {
                 $proxyItem = $item->getProxy();
                 if ($proxyItem->getQty() <= 0) {
                     continue;
@@ -47,10 +47,10 @@ abstract class Ess_M2ePro_Model_Order_Proxy
                 $items[] = $proxyItem;
             }
 
-            $this->items = $this->mergeItems($items);
+            $this->_items = $this->mergeItems($items);
         }
 
-        return $this->items;
+        return $this->_items;
     }
 
     /**
@@ -99,7 +99,7 @@ abstract class Ess_M2ePro_Model_Order_Proxy
      */
     public function setStore(Mage_Core_Model_Store $store)
     {
-        $this->store = $store;
+        $this->_store = $store;
         return $this;
     }
 
@@ -109,11 +109,11 @@ abstract class Ess_M2ePro_Model_Order_Proxy
      */
     public function getStore()
     {
-        if (is_null($this->store)) {
+        if ($this->_store === null) {
             throw new Ess_M2ePro_Model_Exception('Store is not set.');
         }
 
-        return $this->store;
+        return $this->_store;
     }
 
     //########################################
@@ -140,10 +140,6 @@ abstract class Ess_M2ePro_Model_Order_Proxy
 
     //########################################
 
-    abstract public function getBuyerEmail();
-
-    //########################################
-
     /**
      * @return Mage_Customer_Model_Customer
      */
@@ -163,6 +159,16 @@ abstract class Ess_M2ePro_Model_Order_Proxy
         return $addressData['lastname'];
     }
 
+    /**
+     * @return string
+     */
+    public function getBuyerEmail()
+    {
+        $addressData = $this->getAddressData();
+
+        return $addressData['email'];
+    }
+
     //########################################
 
     /**
@@ -170,30 +176,32 @@ abstract class Ess_M2ePro_Model_Order_Proxy
      */
     public function getAddressData()
     {
-        if (empty($this->addressData)) {
-            $rawAddressData = $this->order->getShippingAddress()->getRawData();
+        if (empty($this->_addressData)) {
+            $rawAddressData = $this->_order->getShippingAddress()->getRawData();
 
-            $recipientNameParts = $this->getNameParts($rawAddressData['recipient_name']);
-            $this->addressData['firstname'] = $recipientNameParts['firstname'];
-            $this->addressData['lastname'] = $recipientNameParts['lastname'];
+            $recipientNameParts               = $this->getNameParts($rawAddressData['recipient_name']);
+            $this->_addressData['firstname']  = $recipientNameParts['firstname'];
+            $this->_addressData['lastname']   = $recipientNameParts['lastname'];
+            $this->_addressData['middlename'] = $recipientNameParts['middlename'];
 
-            $customerNameParts = $this->getNameParts($rawAddressData['buyer_name']);
-            $this->addressData['customer_firstname'] = $customerNameParts['firstname'];
-            $this->addressData['customer_lastname'] = $customerNameParts['lastname'];
+            $customerNameParts                         = $this->getNameParts($rawAddressData['buyer_name']);
+            $this->_addressData['customer_firstname']  = $customerNameParts['firstname'];
+            $this->_addressData['customer_lastname']   = $customerNameParts['lastname'];
+            $this->_addressData['customer_middlename'] = $customerNameParts['middlename'];
 
-            $this->addressData['email'] = $rawAddressData['email'];
-            $this->addressData['country_id'] = $rawAddressData['country_id'];
-            $this->addressData['region'] = $rawAddressData['region'];
-            $this->addressData['region_id'] = $this->order->getShippingAddress()->getRegionId();
-            $this->addressData['city'] = $rawAddressData['city'];
-            $this->addressData['postcode'] = $rawAddressData['postcode'];
-            $this->addressData['telephone'] = $rawAddressData['telephone'];
-            $this->addressData['street'] = !empty($rawAddressData['street']) ? $rawAddressData['street'] : array();
-            $this->addressData['company'] = !empty($rawAddressData['company']) ? $rawAddressData['company'] : '';
-            $this->addressData['save_in_address_book'] = 0;
+            $this->_addressData['email']                = $rawAddressData['email'];
+            $this->_addressData['country_id']           = $rawAddressData['country_id'];
+            $this->_addressData['region']               = $rawAddressData['region'];
+            $this->_addressData['region_id']            = $this->_order->getShippingAddress()->getRegionId();
+            $this->_addressData['city']                 = $rawAddressData['city'];
+            $this->_addressData['postcode']             = $rawAddressData['postcode'];
+            $this->_addressData['telephone']            = $rawAddressData['telephone'];
+            $this->_addressData['street'] = !empty($rawAddressData['street']) ? $rawAddressData['street'] : array();
+            $this->_addressData['company'] = !empty($rawAddressData['company']) ? $rawAddressData['company'] : '';
+            $this->_addressData['save_in_address_book'] = 0;
         }
 
-        return $this->addressData;
+        return $this->_addressData;
     }
 
     /**
@@ -218,15 +226,27 @@ abstract class Ess_M2ePro_Model_Order_Proxy
     {
         $fullName = trim($fullName);
 
-        $spacePosition = strpos($fullName, ' ');
-        $spacePosition === false && $spacePosition = strlen($fullName);
+        $parts      = explode(' ', $fullName);
+        $partsCount = count($parts);
 
-        $firstName = trim(substr($fullName, 0, $spacePosition));
-        $lastName = trim(substr($fullName, $spacePosition + 1));
+        $firstName  = '';
+        $middleName = '';
+        $lastName   = '';
+
+        if ($partsCount > 1) {
+            $firstName = array_shift($parts);
+            $lastName  = array_pop($parts);
+            if (!empty($parts)) {
+                $middleName = implode(' ', $parts);
+            }
+        } else {
+            $firstName = $fullName;
+        }
 
         return array(
-            'firstname' => $firstName ? $firstName : 'N/A',
-            'lastname'  => $lastName ? $lastName : 'N/A'
+            'firstname'  => $firstName ? $firstName : 'N/A',
+            'middlename' => $middleName ? trim($middleName) : '',
+            'lastname'   => $lastName ? $lastName : 'N/A'
         );
     }
 
@@ -358,6 +378,19 @@ COMMENT;
         return !$this->isTaxModeNone() &&
                !$this->isTaxModeChannel() &&
                !$this->isTaxModeMagento();
+    }
+
+    //########################################
+
+    public function getWasteRecyclingFee()
+    {
+        $resultFee = 0.0;
+
+        foreach ($this->getItems() as $item) {
+            $resultFee += $item->getWasteRecyclingFee();
+        }
+
+        return $resultFee;
     }
 
     //########################################

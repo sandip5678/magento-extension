@@ -2,17 +2,17 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
     extends Mage_Adminhtml_Block_Widget_Grid
 {
-    public $hideMassactionColumn = false;
-    protected $hideMassactionDropDown = false;
+    public    $hideMassactionColumn    = false;
+    protected $_hideMassactionDropDown = false;
 
-    protected $showAdvancedFilterProductsOption = true;
+    protected $_showAdvancedFilterProductsOption = true;
 
     //########################################
 
@@ -28,21 +28,16 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
         $this->setUseAjax(true);
         // ---------------------------------------
 
-        $this->isAjax = json_encode($this->getRequest()->isXmlHttpRequest());
+        $this->isAjax = Mage::helper('M2ePro')->jsonEncode($this->getRequest()->isXmlHttpRequest());
     }
 
     //########################################
 
     public function setCollection($collection)
     {
-        $listing = Mage::helper('M2ePro/Data_Global')->getValue('temp_data');
-
-        $storeId = 0;
-        if ($listing) {
-            $storeId = $listing['store_id'];
+        if ($collection->getStoreId() === null) {
+            $collection->setStoreId(Mage_Catalog_Model_Abstract::DEFAULT_STORE_ID);
         }
-
-        $collection->setStoreId($storeId);
 
         /** @var $ruleModel Ess_M2ePro_Model_Magento_Product_Rule */
         $ruleModel = Mage::helper('M2ePro/Data_Global')->getValue('rule_model');
@@ -63,11 +58,14 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
         // Set fake action
         // ---------------------------------------
         if ($this->getMassactionBlock()->getCount() == 0) {
-            $this->getMassactionBlock()->addItem('fake', array(
+            $this->getMassactionBlock()->addItem(
+                'fake', array(
                 'label' => '&nbsp;&nbsp;&nbsp;&nbsp;',
                 'url'   => '#',
-            ));
+                )
+            );
         }
+
         // ---------------------------------------
 
         return parent::_prepareMassaction();
@@ -78,6 +76,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
         if ($this->hideMassactionColumn) {
             return;
         }
+
         parent::_prepareMassactionColumn();
     }
 
@@ -89,7 +88,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
     public function getMassactionBlockHtml()
     {
         $advancedFilterBlock = $this->getLayout()->createBlock('M2ePro/adminhtml_listing_product_rule');
-        $advancedFilterBlock->setShowHideProductsOption($this->showAdvancedFilterProductsOption);
+        $advancedFilterBlock->setShowHideProductsOption($this->_showAdvancedFilterProductsOption);
         $advancedFilterBlock->setGridJsObjectName($this->getJsObjectName());
 
         return $advancedFilterBlock->toHtml() . (($this->hideMassactionColumn)
@@ -98,23 +97,35 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
 
     //########################################
 
-    public function callbackColumnProductId($value, $row, $column, $isExport)
+    public function callbackColumnMagentoProductId($value, $row, $column, $isExport)
+    {
+        return $this->callbackColumnProductId($value, $row, $column, $isExport, Mage_Core_Model_App::ADMIN_STORE_ID);
+    }
+
+    public function callbackColumnListingProductId($value, $row, $column, $isExport)
+    {
+        return $this->callbackColumnProductId($value, $row, $column, $isExport);
+    }
+
+    public function callbackColumnProductId($value, $row, $column, $isExport, $storeId = null)
     {
         /** @var Ess_M2ePro_Model_Listing $listing */
         $listing = Mage::helper('M2ePro/Data_Global')->getValue('temp_data');
 
         $productId = (int)$value;
 
-        $storeId = 0;
-        if ($listing) {
-            $storeId = (int)$listing['store_id'];
+        if ($storeId === null) {
+            $storeId = 0;
+            if ($listing) {
+                $storeId = (int)$listing['store_id'];
+            }
         }
 
-        $url = $this->getUrl('adminhtml/catalog_product/edit', array('id' => $productId));
+        $url = $this->getUrl('adminhtml/catalog_product/edit', array('id' => $productId, 'store' => $storeId));
         $htmlWithoutThumbnail = '<a href="' . $url . '" target="_blank">'.$productId.'</a>';
 
         $showProductsThumbnails = (bool)(int)Mage::helper('M2ePro/Module')->getConfig()
-            ->getGroupValue('/view/','show_products_thumbnails');
+            ->getGroupValue('/view/', 'show_products_thumbnails');
 
         if (!$showProductsThumbnails) {
             return $htmlWithoutThumbnail;
@@ -125,8 +136,8 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
         $magentoProduct->setProductId($productId);
         $magentoProduct->setStoreId($storeId);
 
-        $thumbnail = $magentoProduct->getThumbnailImageLink();
-        if (is_null($thumbnail)) {
+        $thumbnail = $magentoProduct->getThumbnailImage();
+        if ($thumbnail === null) {
             return $htmlWithoutThumbnail;
         }
 
@@ -134,7 +145,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Magento_Product_Grid_Abstract
 <a href="{$url}" target="_blank">
     {$productId}
     <hr style="border: 1px solid silver; border-bottom: none;">
-    <img src="{$thumbnail}" />
+    <img style="max-width: 100px; max-height: 100px;" src="{$thumbnail->getUrl()}" />
 </a>
 HTML;
     }
@@ -161,6 +172,7 @@ HTML;
             $value = 0;
             $value = '<span style="color: red;">'.$value.'</span>';
         }
+
         return $value;
     }
 
@@ -218,6 +230,7 @@ HTML;
             if (!$this->isShowRuleBlock()) {
                 $html .= $this->getAdvancedFilterButtonHtml();
             }
+
             $html .= $this->getSearchButtonHtml();
         }
 
@@ -229,7 +242,7 @@ HTML;
         // ---------------------------------------
         $css = '';
 
-        if ($this->hideMassactionDropDown) {
+        if ($this->_hideMassactionDropDown) {
             $css = <<<HTML
 <style type="text/css">
     table.massaction div.right {
@@ -238,10 +251,11 @@ HTML;
 </style>
 HTML;
         }
+
         // ---------------------------------------
 
         // ---------------------------------------
-        $isShowRuleBlock = json_encode($this->isShowRuleBlock());
+        $isShowRuleBlock = Mage::helper('M2ePro')->jsonEncode($this->isShowRuleBlock());
 
         $commonJs = <<<HTML
 <script type="text/javascript">
@@ -319,8 +333,40 @@ HTML;
             Mage::helper('M2ePro/Data_Global')->getValue('hide_products_others_listings_prefix')
         );
 
-        is_null($showHideProductsOption) && $showHideProductsOption = 1;
-        return !empty($ruleData) || ($this->showAdvancedFilterProductsOption && $showHideProductsOption);
+        $showHideProductsOption === null && $showHideProductsOption = 1;
+        return !empty($ruleData) || ($this->_showAdvancedFilterProductsOption && $showHideProductsOption);
+    }
+
+    //########################################
+
+    protected function isFilterOrSortByPriceIsUsed($filterName = null, $advancedFilterName = null)
+    {
+        if ($filterName) {
+            $filters = $this->getParam($this->getVarNameFilter());
+            is_string($filters) && $filters = $this->helper('adminhtml')->prepareFilterString($filters);
+
+            if (is_array($filters) && array_key_exists($filterName, $filters)) {
+                return true;
+            }
+
+            $sort = $this->getParam($this->getVarNameSort());
+            if ($sort == $filterName) {
+                return true;
+            }
+        }
+
+        /** @var $ruleModel Ess_M2ePro_Model_Magento_Product_Rule */
+        $ruleModel = Mage::helper('M2ePro/Data_Global')->getValue('rule_model');
+
+        if ($advancedFilterName && $ruleModel) {
+            foreach ($ruleModel->getConditions()->getData($ruleModel->getPrefix()) as $cond) {
+                if ($cond->getAttribute() == $advancedFilterName) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     //########################################

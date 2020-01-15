@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_Chooser_Edit extends Ess_M2ePro_Block_Adminhtml_Widget_Container
 {
-    protected $_categoryType = null;
+    protected $_categoryType;
 
     protected $_selectedCategory = array();
 
@@ -80,7 +80,7 @@ HTML;
 
     public function getCategoryType()
     {
-        if (is_null($this->_categoryType)) {
+        if ($this->_categoryType === null) {
             throw new Ess_M2ePro_Model_Exception_Logic('Category type is not set.');
         }
 

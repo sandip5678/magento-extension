@@ -2,14 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Magento_Product_StockItem
 {
     /** @var Mage_CatalogInventory_Model_Stock_Item */
-    private $stockItem = null;
+    protected $_stockItem = null;
 
     //########################################
 
@@ -19,7 +19,7 @@ class Ess_M2ePro_Model_Magento_Product_StockItem
      */
     public function setStockItem(Mage_CatalogInventory_Model_Stock_Item $stockItem)
     {
-        $this->stockItem = $stockItem;
+        $this->_stockItem = $stockItem;
         return $this;
     }
 
@@ -29,15 +29,25 @@ class Ess_M2ePro_Model_Magento_Product_StockItem
      */
     public function getStockItem()
     {
-        if (is_null($this->stockItem)) {
+        if ($this->_stockItem === null) {
             throw new Ess_M2ePro_Model_Exception_Logic('Stock Item is not set.');
         }
 
-        return $this->stockItem;
+        return $this->_stockItem;
     }
 
+    /**
+     * @param $qty
+     * @param bool $save
+     * @return bool
+     * @throws Ess_M2ePro_Model_Exception
+     */
     public function subtractQty($qty, $save = true)
     {
+        if (!$this->canChangeQty()) {
+            return false;
+        }
+
         $stockItem = $this->getStockItem();
 
         if ($stockItem->getQty() - $stockItem->getMinQty() - $qty < 0) {
@@ -56,20 +66,41 @@ class Ess_M2ePro_Model_Magento_Product_StockItem
         if ($save) {
             $stockItem->save();
         }
+
+        return true;
     }
 
+    /**
+     * @param $qty
+     * @param bool $save
+     * @return bool
+     */
     public function addQty($qty, $save = true)
     {
+        if (!$this->canChangeQty()) {
+            return false;
+        }
+
         $stockItem = $this->getStockItem();
         $stockItem->addQty($qty);
 
-        if ($stockItem->getCanBackInStock() && $stockItem->getQty() > $stockItem->getMinQty()) {
+        if ($stockItem->getQty() > $stockItem->getMinQty()) {
             $stockItem->setIsInStock(true);
         }
 
         if ($save) {
             $stockItem->save();
         }
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    public function canChangeQty()
+    {
+        return Mage::helper('M2ePro/Magento_Stock')->canSubtractQty() && $this->getStockItem()->getManageStock();
     }
 
     //########################################

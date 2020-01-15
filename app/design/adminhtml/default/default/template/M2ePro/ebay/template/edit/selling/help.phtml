@@ -1,5 +1,18 @@
-<?php $url = $this->isEditMode() ? Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(NULL, NULL, 'x/HAAJAQ') :
-    Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(NULL, NULL, 'x/XwAJAQ');
+<?php
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/** @var $this Ess_M2ePro_Block_Adminhtml_Ebay_Template_Edit_Selling_Help */
+
+?>
+
+<?php $url = $this->isEditMode() ? Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(null, null, 'x/HAAJAQ') :
+    Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(null, null, 'x/XwAJAQ');
 ?>
 <div id="ebay_template_edit_selling_help" class="block_notices_module no-icon" title="<?php echo Mage::helper('M2ePro')->__('Selling Settings'); ?>">
     <p><?php echo Mage::helper('M2ePro')->__(

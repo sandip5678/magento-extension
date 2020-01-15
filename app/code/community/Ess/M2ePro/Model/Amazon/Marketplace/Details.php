@@ -2,15 +2,15 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Amazon_Marketplace_Details
 {
-    private $marketplaceId = null;
+    protected $_marketplaceId = null;
 
-    private $productData = array();
+    protected $_productData = array();
 
     //########################################
 
@@ -21,11 +21,11 @@ class Ess_M2ePro_Model_Amazon_Marketplace_Details
      */
     public function setMarketplaceId($marketplaceId)
     {
-        if ($this->marketplaceId === $marketplaceId) {
+        if ($this->_marketplaceId === $marketplaceId) {
             return $this;
         }
 
-        $this->marketplaceId = $marketplaceId;
+        $this->_marketplaceId = $marketplaceId;
         $this->load();
 
         return $this;
@@ -38,7 +38,7 @@ class Ess_M2ePro_Model_Amazon_Marketplace_Details
      */
     public function getProductData()
     {
-       return $this->productData;
+       return $this->_productData;
     }
 
     /**
@@ -47,11 +47,11 @@ class Ess_M2ePro_Model_Amazon_Marketplace_Details
      */
     public function getVariationThemes($productDataNick)
     {
-        if (!isset($this->productData[$productDataNick])) {
+        if (!isset($this->_productData[$productDataNick])) {
             return array();
         }
 
-        return (array)$this->productData[$productDataNick]['variation_themes'];
+        return (array)$this->_productData[$productDataNick]['variation_themes'];
     }
 
     /**
@@ -67,19 +67,20 @@ class Ess_M2ePro_Model_Amazon_Marketplace_Details
 
     //########################################
 
-    private function load()
+    protected function load()
     {
-        if (is_null($this->marketplaceId)) {
+        if ($this->_marketplaceId === null) {
             throw new Ess_M2ePro_Model_Exception('Marketplace was not set.');
         }
 
         /** @var $connRead Varien_Db_Adapter_Pdo_Mysql */
         $connRead = Mage::getSingleton('core/resource')->getConnection('core_read');
-        $table    = Mage::getSingleton('core/resource')->getTableName('m2epro_amazon_dictionary_marketplace');
+        $table    = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_amazon_dictionary_marketplace');
 
         $data = $connRead->select()
             ->from($table)
-            ->where('marketplace_id = ?', (int)$this->marketplaceId)
+            ->where('marketplace_id = ?', (int)$this->_marketplaceId)
             ->query()
             ->fetch();
 
@@ -87,7 +88,7 @@ class Ess_M2ePro_Model_Amazon_Marketplace_Details
             throw new Ess_M2ePro_Model_Exception('Marketplace not found or not synchronized');
         }
 
-        $this->productData    = json_decode($data['product_data'], true);
+        $this->_productData = Mage::helper('M2ePro')->jsonDecode($data['product_data']);
     }
 
     //########################################

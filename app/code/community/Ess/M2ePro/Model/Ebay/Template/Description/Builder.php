@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -14,7 +14,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
     public function build(array $data)
     {
         if (empty($data)) {
-            return NULL;
+            return null;
         }
 
         $this->validate($data);
@@ -39,15 +39,11 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
     {
         $prepared = parent::prepareData($data);
 
-        $isSimpleMode = Mage::helper('M2ePro/View_Ebay')->isSimpleMode();
-
-        $defaultData = $isSimpleMode ?
-            Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettingsSimpleMode() :
-            Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettingsAdvancedMode();
+        $defaultData = Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettings();
 
         $defaultData['enhancement'] = explode(',', $defaultData['enhancement']);
-        $defaultData['product_details'] = json_decode($defaultData['product_details'], true);
-        $defaultData['watermark_settings'] = json_decode($defaultData['watermark_settings'], true);
+        $defaultData['product_details'] = Mage::helper('M2ePro')->jsonDecode($defaultData['product_details']);
+        $defaultData['watermark_settings'] = Mage::helper('M2ePro')->jsonDecode($defaultData['watermark_settings']);
 
         $data = Mage::helper('M2ePro')->arrayReplaceRecursive($defaultData, $data);
 
@@ -96,11 +92,10 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
         }
 
         if (isset($data['product_details'])) {
-
             $prepared['product_details'] = $data['product_details'];
 
             if (is_array($prepared['product_details'])) {
-                $prepared['product_details'] = json_encode($prepared['product_details']);
+                $prepared['product_details'] = Mage::helper('M2ePro')->jsonEncode($prepared['product_details']);
             }
         }
 
@@ -117,7 +112,6 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
         }
 
         if (isset($data['enhancement'])) {
-
             $prepared['enhancement'] = $data['enhancement'];
 
             if (is_array($prepared['enhancement'])) {
@@ -173,7 +167,9 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
             $prepared['variation_configurable_images'] = $data['variation_configurable_images'];
 
             if (is_array($prepared['variation_configurable_images'])) {
-                $prepared['variation_configurable_images'] = json_encode($prepared['variation_configurable_images']);
+                $prepared['variation_configurable_images'] = Mage::helper('M2ePro')->jsonEncode(
+                    $prepared['variation_configurable_images']
+                );
             }
         }
 
@@ -194,7 +190,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
             $watermarkSettings['position'] = (int)$data['watermark_settings']['position'];
 
             if (isset($data['old_watermark_settings']) &&
-                $data['watermark_settings']['position'] != $data['old_watermark_settings']['position']) {
+                $data['watermark_settings']['position'] !== $data['old_watermark_settings']['position']) {
                 $hashChange = true;
             }
         }
@@ -203,7 +199,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
             $watermarkSettings['scale'] = (int)$data['watermark_settings']['scale'];
 
             if (isset($data['old_watermark_settings']) &&
-                $data['watermark_settings']['scale'] != $data['old_watermark_settings']['scale']) {
+                $data['watermark_settings']['scale'] !== $data['old_watermark_settings']['scale']) {
                 $hashChange = true;
             }
         }
@@ -212,7 +208,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
             $watermarkSettings['transparent'] = (int)$data['watermark_settings']['transparent'];
 
             if (isset($data['old_watermark_settings']) &&
-                $data['watermark_settings']['transparent'] != $data['old_watermark_settings']['transparent']) {
+                $data['watermark_settings']['transparent'] !== $data['old_watermark_settings']['transparent']) {
                 $hashChange = true;
             }
         }
@@ -220,13 +216,11 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
         // ---------------------------------------
 
         if (!empty($_FILES['watermark_image']['tmp_name'])) {
-
             $hashChange = true;
 
             $prepared['watermark_image'] = file_get_contents($_FILES['watermark_image']['tmp_name']);
 
             if (isset($prepared['id'])) {
-
                 $varDir = new Ess_M2ePro_Model_VariablesDir(
                     array('child_folder' => 'ebay/template/description/watermarks')
                 );
@@ -236,7 +230,6 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
                     @unlink($watermarkPath);
                 }
             }
-
         } elseif (!empty($data['old_watermark_image']) && !isset($prepared['id'])) {
             $prepared['watermark_image'] = base64_decode($data['old_watermark_image']);
         }
@@ -251,7 +244,7 @@ class Ess_M2ePro_Model_Ebay_Template_Description_Builder
             $watermarkSettings['hashes']['current'] = $data['old_watermark_settings']['hashes']['current'];
         }
 
-        $prepared['watermark_settings'] = json_encode($watermarkSettings);
+        $prepared['watermark_settings'] = Mage::helper('M2ePro')->jsonEncode($watermarkSettings);
 
         // ---------------------------------------
 

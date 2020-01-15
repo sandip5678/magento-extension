@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -17,17 +17,8 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
     const DISPUTE_EXPLANATION_BUYER_HAS_NOT_PAID = 'BuyerNotPaid';
     const DISPUTE_REASON_BUYER_HAS_NOT_PAID      = 'BuyerHasNotPaid';
 
-    //########################################
-
-    // M2ePro_TRANSLATIONS
-    // Product Import is disabled in eBay Account Settings.
-    // Data obtaining for eBay Item failed. Please try again later.
-    // Product for eBay Item #%id% was created in Magento Catalog.
-
-    //########################################
-
-    /** @var $channelItem Ess_M2ePro_Model_Ebay_Item */
-    private $channelItem = NULL;
+    /** @var $_channelItem Ess_M2ePro_Model_Ebay_Item */
+    protected $_channelItem = null;
 
     //########################################
 
@@ -72,15 +63,15 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
      */
     public function getChannelItem()
     {
-        if (is_null($this->channelItem)) {
-            $this->channelItem = Mage::getModel('M2ePro/Ebay_Item')->getCollection()
-                ->addFieldToFilter('item_id', $this->getItemId())
-                ->addFieldToFilter('account_id', $this->getEbayAccount()->getId())
-                ->setOrder('create_date', Varien_Data_Collection::SORT_ORDER_DESC)
-                ->getFirstItem();
+        if ($this->_channelItem === null) {
+            $this->_channelItem = Mage::getModel('M2ePro/Ebay_Item')->getCollection()
+                                      ->addFieldToFilter('item_id', $this->getItemId())
+                                      ->addFieldToFilter('account_id', $this->getEbayAccount()->getId())
+                                      ->setOrder('create_date', Varien_Data_Collection::SORT_ORDER_DESC)
+                                      ->getFirstItem();
         }
 
-        return !is_null($this->channelItem->getId()) ? $this->channelItem : NULL;
+        return $this->_channelItem->getId() !== null ? $this->_channelItem : null;
     }
 
     //########################################
@@ -124,6 +115,14 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
     public function getFinalFee()
     {
         return (float)$this->getData('final_fee');
+    }
+
+    /**
+     * @return float
+     */
+    public function getWasteRecyclingFee()
+    {
+        return (float)$this->getData('waste_recycling_fee');
     }
 
     /**
@@ -187,7 +186,8 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
      */
     public function hasVariation()
     {
-        return count($this->getVariationDetails()) > 0;
+        $details = $this->getVariationDetails();
+        return !empty($details);
     }
 
     /**
@@ -271,11 +271,12 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
     {
         // Item was listed by M2E
         // ---------------------------------------
-        if (!is_null($this->getChannelItem())) {
+        if ($this->getChannelItem() !== null) {
             return $this->getEbayAccount()->isMagentoOrdersListingsStoreCustom()
                 ? $this->getEbayAccount()->getMagentoOrdersListingsStoreId()
                 : $this->getChannelItem()->getStoreId();
         }
+
         // ---------------------------------------
 
         return $this->getEbayAccount()->getMagentoOrdersListingsOtherStoreId();
@@ -283,15 +284,43 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
 
     //########################################
 
+    public function canCreateMagentoOrder()
+    {
+        return $this->isOrdersCreationEnabled();
+    }
+
+    public function isReservable()
+    {
+        return $this->isOrdersCreationEnabled();
+    }
+
+    // ---------------------------------------
+
+    protected function isOrdersCreationEnabled()
+    {
+        $channelItem = $this->getChannelItem();
+
+        if ($channelItem !== null && !$this->getEbayAccount()->isMagentoOrdersListingsModeEnabled()) {
+            return false;
+        }
+
+        if ($channelItem === null && !$this->getEbayAccount()->isMagentoOrdersListingsOtherModeEnabled()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    //########################################
+
     public function getAssociatedProductId()
     {
-        $this->validate();
-
         // Item was listed by M2E
         // ---------------------------------------
-        if (!is_null($this->getChannelItem())) {
+        if ($this->getChannelItem() !== null) {
             return $this->getChannelItem()->getProductId();
         }
+
         // ---------------------------------------
 
         // 3rd party Item
@@ -314,6 +343,7 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
                 return $product->getId();
             }
         }
+
         // ---------------------------------------
 
         $product = $this->createProduct();
@@ -324,31 +354,14 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
 
     public function prepareMagentoOptions($options)
     {
-        return Mage::helper('M2ePro/Component_Ebay')->reduceOptionsForOrders($options);
-    }
-
-    private function validate()
-    {
-        $ebayItem = $this->getChannelItem();
-
-        if (!is_null($ebayItem) && !$this->getEbayAccount()->isMagentoOrdersListingsModeEnabled()) {
-            throw new Ess_M2ePro_Model_Exception(
-                'Magento Order Creation for Items Listed by M2E Pro is disabled in Account Settings.'
-            );
-        }
-
-        if (is_null($ebayItem) && !$this->getEbayAccount()->isMagentoOrdersListingsOtherModeEnabled()) {
-            throw new Ess_M2ePro_Model_Exception(
-                'Magento Order Creation for Items Listed by 3rd party Software is disabled in Account Settings.'
-            );
-        }
+        return Mage::helper('M2ePro/Component_Ebay')->prepareOptionsForOrders($options);
     }
 
     /**
      * @return Mage_Catalog_Model_Product
      * @throws Ess_M2ePro_Model_Exception
      */
-    private function createProduct()
+    protected function createProduct()
     {
         if (!$this->getEbayAccount()->isMagentoOrdersListingsOtherProductImportEnabled()) {
             throw new Ess_M2ePro_Model_Exception('Product Import is disabled in Account Settings.');
@@ -379,6 +392,7 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
         if ($product->getId()) {
             return $product;
         }
+
         // ---------------------------------------
 
         $storeId = $this->getEbayAccount()->getMagentoOrdersListingsOtherStoreId();
@@ -403,13 +417,15 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
         return $productBuilder->getProduct();
     }
 
-    private function associateWithProduct(Mage_Catalog_Model_Product $product)
+    protected function associateWithProduct(Mage_Catalog_Model_Product $product)
     {
         if (!$this->hasVariation()) {
-            Mage::dispatchEvent('m2epro_associate_ebay_order_item_to_product', array(
+            Mage::dispatchEvent(
+                'm2epro_associate_ebay_order_item_to_product', array(
                 'product'    => $product,
                 'order_item' => $this->getParentObject(),
-            ));
+                )
+            );
         }
     }
 
@@ -421,23 +437,45 @@ class Ess_M2ePro_Model_Ebay_Order_Item extends Ess_M2ePro_Model_Component_Child_
      */
     public function updateShippingStatus(array $trackingDetails = array())
     {
-        $params = array();
-
-        if (isset($trackingDetails['tracking_number'])) {
-            $params['tracking_number'] = $trackingDetails['tracking_number'];
-            $params['carrier_code'] = Mage::helper('M2ePro/Component_Ebay')->getCarrierTitle(
-                $trackingDetails['carrier_code'], $trackingDetails['carrier_title']
-            );
-
-            // remove unsupported by eBay symbols
-            $params['carrier_code'] = str_replace(array('\'', '"', '+', '(', ')'), array(), $params['carrier_code']);
+        if (!$this->getEbayOrder()->canUpdateShippingStatus($trackingDetails)) {
+            return false;
         }
 
-        /** @var $dispatcher Ess_M2ePro_Model_Connector_Ebay_OrderItem_Dispatcher */
-        $dispatcher = Mage::getModel('M2ePro/Connector_Ebay_OrderItem_Dispatcher');
-        $action = Ess_M2ePro_Model_Connector_Ebay_OrderItem_Dispatcher::ACTION_UPDATE_STATUS;
+        $params = array(
+            'item_id' => $this->getId(),
+        );
 
-        return $dispatcher->process($action, $this->getParentObject(), $params);
+        if (!empty($trackingDetails['carrier_code'])) {
+            $trackingDetails['carrier_title'] = Mage::helper('M2ePro/Component_Ebay')->getCarrierTitle(
+                $trackingDetails['carrier_code'],
+                isset($trackingDetails['carrier_title']) ? $trackingDetails['carrier_title'] : ''
+            );
+        }
+
+        if (!empty($trackingDetails['carrier_title'])) {
+            if ($trackingDetails['carrier_title'] == Ess_M2ePro_Model_Order_Shipment_Handler::CUSTOM_CARRIER_CODE &&
+                !empty($trackingDetails['shipping_method']))
+            {
+                $trackingDetails['carrier_title'] = $trackingDetails['shipping_method'];
+            }
+
+            // remove unsupported by eBay symbols
+            $trackingDetails['carrier_title'] = str_replace(
+                array('\'', '"', '+', '(', ')'), array(), $trackingDetails['carrier_title']
+            );
+        }
+
+        $params = array_merge($params, $trackingDetails);
+
+        $action    = Ess_M2ePro_Model_Order_Change::ACTION_UPDATE_SHIPPING;
+        $creator   = $this->getEbayOrder()->getParentObject()->getLog()->getInitiator();
+        $component = Ess_M2ePro_Helper_Component_Ebay::NICK;
+
+        Mage::getModel('M2ePro/Order_Change')->create(
+            $this->getParentObject()->getOrderId(), $action, $creator, $component, $params
+        );
+
+        return true;
     }
 
     //########################################

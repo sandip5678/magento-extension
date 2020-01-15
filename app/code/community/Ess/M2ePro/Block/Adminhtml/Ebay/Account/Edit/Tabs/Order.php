@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Account_Edit_Tabs_Order extends Mage_Adminhtml_Block_Widget
 {
-    protected $_possibleMagentoStatuses = null;
+    protected $_possibleMagentoStatuses;
 
     //########################################
 
@@ -28,10 +28,11 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Account_Edit_Tabs_Order extends Mage_Admin
     {
         $account = Mage::helper('M2ePro/Data_Global')->getValue('temp_data');
         $magentoOrdersSettings = $account->getData('magento_orders_settings');
-        $magentoOrdersSettings = !empty($magentoOrdersSettings) ? json_decode($magentoOrdersSettings, true) : array();
+        $magentoOrdersSettings = !empty($magentoOrdersSettings)
+            ? Mage::helper('M2ePro')->jsonDecode($magentoOrdersSettings) : array();
 
         // ---------------------------------------
-        $temp = Mage::getModel('core/website')->getCollection()->setOrder('sort_order','ASC')->toArray();
+        $temp = Mage::getModel('core/website')->getCollection()->setOrder('sort_order', 'ASC')->toArray();
         $this->websites = $temp['items'];
         // ---------------------------------------
 
@@ -43,23 +44,28 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Account_Edit_Tabs_Order extends Mage_Admin
         // ---------------------------------------
         $selectedStore = !empty($magentoOrdersSettings['listing']['store_id'])
                             ? $magentoOrdersSettings['listing']['store_id'] : '';
-        $blockStoreSwitcher = $this->getLayout()->createBlock('M2ePro/adminhtml_storeSwitcher', '', array(
+        $blockStoreSwitcher = $this->getLayout()->createBlock(
+            'M2ePro/adminhtml_storeSwitcher', '', array(
             'id' => 'magento_orders_listings_store_id',
             'name' => 'magento_orders_settings[listing][store_id]',
             'selected' => $selectedStore
-        ));
+            )
+        );
         $blockStoreSwitcher->hasDefaultOption(false);
         $this->setChild('magento_orders_listings_store_id', $blockStoreSwitcher);
         // ---------------------------------------
 
         // ---------------------------------------
         $selectedStore = !empty($magentoOrdersSettings['listing_other']['store_id'])
-                            ? $magentoOrdersSettings['listing_other']['store_id'] : '';
-        $blockStoreSwitcher = $this->getLayout()->createBlock('M2ePro/adminhtml_storeSwitcher', '', array(
+                            ? $magentoOrdersSettings['listing_other']['store_id']
+                            : Mage::helper('M2ePro/Magento_Store')->getDefaultStoreId();
+        $blockStoreSwitcher = $this->getLayout()->createBlock(
+            'M2ePro/adminhtml_storeSwitcher', '', array(
             'id' => 'magento_orders_listings_other_store_id',
             'name' => 'magento_orders_settings[listing_other][store_id]',
             'selected' => $selectedStore
-        ));
+            )
+        );
         $blockStoreSwitcher->hasDefaultOption(false);
         $this->setChild('magento_orders_listings_other_store_id', $blockStoreSwitcher);
         // ---------------------------------------
@@ -75,12 +81,14 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Account_Edit_Tabs_Order extends Mage_Admin
         $this->productTaxClasses = $productTaxClasses;
         // ---------------------------------------
 
+        $this->isStorePickupEnabled = $account->getChildObject()->isPickupStoreEnabled();
+
         return parent::_beforeToHtml();
     }
 
     public function getMagentoOrderStatusList()
     {
-        if (is_null($this->_possibleMagentoStatuses)) {
+        if ($this->_possibleMagentoStatuses === null) {
             $this->_possibleMagentoStatuses = Mage::getSingleton('sales/order_config')->getStatuses();
         }
 

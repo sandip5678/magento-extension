@@ -2,27 +2,25 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Variation_Manager_Type_Relation_Parent_Processor_Sub_Abstract
 {
-    //########################################
-
-    /** @var Ess_M2ePro_Model_Amazon_Listing_Product_Variation_Manager_Type_Relation_Parent_Processor $processor  */
-    private $processor = null;
+    /** @var Ess_M2ePro_Model_Amazon_Listing_Product_Variation_Manager_Type_Relation_Parent_Processor $_processor  */
+    protected $_processor = null;
 
     //########################################
 
     public function getProcessor()
     {
-        return $this->processor;
+        return $this->_processor;
     }
 
     public function setProcessor($processor)
     {
-        $this->processor = $processor;
+        $this->_processor = $processor;
         return $this;
     }
 
@@ -40,7 +38,7 @@ abstract class Ess_M2ePro_Model_Amazon_Listing_Product_Variation_Manager_Type_Re
 
     protected function validate()
     {
-        if (is_null($this->getProcessor())) {
+        if ($this->getProcessor() === null) {
             throw new Ess_M2ePro_Model_Exception_Logic('Processor was not set.');
         }
     }

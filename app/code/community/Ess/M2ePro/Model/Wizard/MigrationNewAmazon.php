@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Wizard_MigrationNewAmazon extends Ess_M2ePro_Model_Wizard
 {
-    protected $steps = array(
+    protected $_steps = array(
         'marketplacesSynchronization',
         'descriptionTemplates',
         'information'
@@ -21,7 +21,7 @@ class Ess_M2ePro_Model_Wizard_MigrationNewAmazon extends Ess_M2ePro_Model_Wizard
      */
     public function getSteps()
     {
-        $steps = $this->steps;
+        $steps = $this->_steps;
         $descriptionTemplatesData = $this->getDataForDescriptionTemplatesStep();
 
         if (empty($descriptionTemplatesData) &&
@@ -43,7 +43,7 @@ class Ess_M2ePro_Model_Wizard_MigrationNewAmazon extends Ess_M2ePro_Model_Wizard
         $tempTemplates = Mage::getModel('M2ePro/Registry')->load('/wizard/new_amazon_description_templates/', 'key')
                                                           ->getData('value');
 
-        return $tempTemplates ? (array)json_decode($tempTemplates, true) : array();
+        return $tempTemplates ? (array)Mage::helper('M2ePro')->jsonDecode($tempTemplates) : array();
     }
 
     /**

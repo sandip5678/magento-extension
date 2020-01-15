@@ -2,17 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 abstract class Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid extends Mage_Adminhtml_Block_Widget_Grid
 {
-    private $listingId = null;
-
-    //########################################
-
-    abstract public function getMotorsType();
+    protected $_listingId  = null;
+    protected $_motorsType = null;
 
     //########################################
 
@@ -22,8 +19,8 @@ abstract class Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid extends Mage_
 
         // Initialization block
         //------------------------------
-        $motorsType = Mage::helper('M2ePro/Component_Ebay_Motors')->getIdentifierKey($this->getMotorsType());
-        $this->setId('ebayMotor'.$motorsType.'Grid');
+        $identifier = Mage::helper('M2ePro/Component_Ebay_Motors')->getIdentifierKey($this->getMotorsType());
+        $this->setId('ebayMotor'.$identifier.'Grid');
         //------------------------------
 
         // Set default values
@@ -39,13 +36,26 @@ abstract class Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid extends Mage_
 
     public function setListingId($marketplaceId)
     {
-        $this->listingId = $marketplaceId;
+        $this->_listingId = $marketplaceId;
         return $this;
     }
 
     public function getListingId()
     {
-        return $this->listingId;
+        return $this->_listingId;
+    }
+
+    //----------------------------------------
+
+    public function setMotorsType($motorsType)
+    {
+        $this->_motorsType = $motorsType;
+        return $this;
+    }
+
+    public function getMotorsType()
+    {
+        return $this->_motorsType;
     }
 
     //########################################
@@ -64,29 +74,37 @@ abstract class Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid extends Mage_
 
         // Set mass-action
         //--------------------------------
-        $this->getMassactionBlock()->addItem('select', array(
+        $this->getMassactionBlock()->addItem(
+            'select', array(
             'label'   => Mage::helper('M2ePro')->__('Select'),
             'url'     => '',
             'confirm' => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
 
-        $this->getMassactionBlock()->addItem('setNote', array(
+        $this->getMassactionBlock()->addItem(
+            'setNote', array(
             'label'   => Mage::helper('M2ePro')->__('Set Note'),
             'url'     => '',
             'confirm' => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
 
-        $this->getMassactionBlock()->addItem('resetNote', array(
+        $this->getMassactionBlock()->addItem(
+            'resetNote', array(
             'label'   => Mage::helper('M2ePro')->__('Reset Note'),
             'url'     => '',
             'confirm' => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
 
-        $this->getMassactionBlock()->addItem('saveAsGroup', array(
+        $this->getMassactionBlock()->addItem(
+            'saveAsGroup', array(
             'label'   => Mage::helper('M2ePro')->__('Save As Group'),
             'url'     => '',
             'confirm' => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
         //--------------------------------
 
         return parent::_prepareMassaction();
@@ -170,18 +188,6 @@ HTML;
         $this->setChild('save_filter', $saveFilterBtn);
         //------------------------------
 
-        //------------------------------
-        $data = array(
-            'id'      => 'add_custom_motors_record_button',
-            'label'   => Mage::helper('M2ePro')->__('Add New '. $this->getItemTitle()),
-            'class'   => 'success',
-            'style'   => 'display: none;',
-            'onclick' => 'EbayMotorsHandlerObj.openAddRecordPopup()'
-        );
-        $addCustomMotorsRecordBtn = $this->getLayout()->createBlock('adminhtml/widget_button')->setData($data);
-        $this->setChild('add_custom_motors_record_button', $addCustomMotorsRecordBtn);
-        //------------------------------
-
         return parent::_prepareLayout();
     }
 
@@ -192,17 +198,11 @@ HTML;
         return $this->getChildHtml('save_filter');
     }
 
-    public function getAddCustomMotorsRecordButtonHtml()
-    {
-        return $this->getChildHtml('add_custom_motors_record_button');
-    }
-
     //########################################
 
     public function getMainButtonsHtml()
     {
-        return $this->getAddCustomMotorsRecordButtonHtml() .
-            $this->getSaveFilterButtonHtml() .
+        return $this->getSaveFilterButtonHtml() .
             parent::getMainButtonsHtml();
     }
 
@@ -239,8 +239,32 @@ $('save_filter_btn').addClassName('disabled');
 JS;
         }
 
+        $urls = Mage::helper('M2ePro')->jsonEncode(
+            array(
+            'adminhtml_ebay_motor/getItemsCountAlertPopupContent' => $this->getUrl(
+                '*/adminhtml_ebay_motor/getItemsCountAlertPopupContent'
+            )
+            )
+        );
+
+        $translations = Mage::helper('M2ePro')->jsonEncode(
+            array(
+            'Attention' => Mage::helper('M2ePro')->__('Attention')
+            )
+        );
+
+        $constants = Mage::helper('M2ePro')->getClassConstantAsJson('Ess_M2ePro_Helper_Component_Ebay_Motors');
+
         $additionalHtml .= <<<JS
 EbayMotorAddItemGridHandlerObj.afterInitPage();
+
+M2ePro.url.add({$urls});
+M2ePro.translator.add({$translations});
+
+M2ePro.php.setConstants(
+    {$constants},
+    'Ess_M2ePro_Helper_Component_Ebay_Motors'
+);
 JS;
 
         $additionalHtml .= '</script>';
@@ -258,7 +282,10 @@ JS;
     {
         return Mage::helper('M2ePro')->__(
             'No records found.
-             You can add Custom Compatible Vehicles manually or through the %link_start%Import Tool%link_end%.',
+             You can %link_new_item_start%add Custom Compatible Vehicles%link_new_item_end% manually
+             or through the %link_start%Import Tool%link_end%.',
+            '<a href="javascript:void(0)" onclick="EbayMotorsHandlerObj.openAddRecordPopup();">',
+            '</a>',
             '<a target="_blank" href="' .
                 $this->getUrl('*/adminhtml_ebay_configuration/index') .
                 '#magento_block_ebay_configuration_general_motors_epids">',
@@ -270,7 +297,7 @@ JS;
 
     public function getItemTitle()
     {
-        if ($this->getMotorsType() == Ess_M2ePro_Helper_Component_Ebay_Motors::TYPE_EPID) {
+        if (Mage::helper('M2ePro/Component_Ebay_Motors')->isTypeBasedOnEpids($this->getMotorsType())) {
             return Mage::helper('M2ePro')->__('ePID(s)');
         }
 

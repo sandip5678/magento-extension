@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -42,11 +42,13 @@ JS;
 
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Create an M2E Pro Listing'),
                 'onclick' => $onClick,
                 'id' => 'create_listing_button'
-            ));
+                )
+            );
         $this->setChild('create_listing_button', $buttonBlock);
         // ---------------------------------------
 

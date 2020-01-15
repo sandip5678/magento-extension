@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -63,10 +63,12 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
     public function addItemGridAction()
     {
         $motorsType = $this->getRequest()->getParam('motors_type');
-        $motorsType = Mage::helper('M2ePro/Component_Ebay_Motors')->getIdentifierKey($motorsType);
+        $identifierType = Mage::helper('M2ePro/Component_Ebay_Motors')->getIdentifierKey($motorsType);
 
-        /** @var Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid Epid_Grid $block */
-        $block = $this->getLayout()->createBlock('M2ePro/adminhtml_ebay_motor_add_item_'.$motorsType.'_grid');
+        /** @var Ess_M2ePro_Block_Adminhtml_Ebay_Motor_Add_Item_Grid $block */
+        $block = $this->getLayout()->createBlock('M2ePro/adminhtml_ebay_motor_add_item_'.$identifierType.'_grid');
+        $block->setMotorsType($motorsType);
+
         $this->getResponse()->setBody($block->toHtml());
     }
 
@@ -156,7 +158,7 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         parse_str($post['conditions'], $post['conditions']);
 
         foreach ($post['conditions'] as $key => $value) {
-            if (empty($value) || $key == 'massaction') {
+            if ($value == '' || $key == 'massaction') {
                 unset($post['conditions'][$key]);
             }
         }
@@ -165,7 +167,7 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
             'title' => $post['title'],
             'type' => $post['type'],
             'note' => $post['note'],
-            'conditions' => json_encode($post['conditions']),
+            'conditions' => Mage::helper('M2ePro')->jsonEncode($post['conditions']),
         );
 
         $model = Mage::getModel('M2ePro/Ebay_Motor_Filter');
@@ -187,7 +189,6 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         );
 
         if ($data['mode'] == Ess_M2ePro_Model_Ebay_Motor_Group::MODE_ITEM) {
-
             parse_str($post['items'], $post['items']);
 
             $itemsData = array();
@@ -207,17 +208,18 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         $model->addData($data)->save();
 
         if ($data['mode'] == Ess_M2ePro_Model_Ebay_Motor_Group::MODE_FILTER) {
-
             $filtersIds = $post['items'];
             if (!is_array($filtersIds)) {
                 $filtersIds = explode(',', $filtersIds);
             }
 
-            $tableName = Mage::getSingleton('core/resource')->getTableName('m2epro_ebay_motor_filter_to_group');
+            $tableName = Mage::helper('M2ePro/Module_Database_Structure')
+                ->getTableNameWithPrefix('m2epro_ebay_motor_filter_to_group');
             $connWrite = Mage::getSingleton('core/resource')->getConnection('core/write');
 
             foreach ($filtersIds as $filterId) {
-                $connWrite->insert($tableName, array(
+                $connWrite->insert(
+                    $tableName, array(
                         'filter_id' => $filterId,
                         'group_id' => $model->getId(),
                     )
@@ -242,7 +244,8 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         $tableName = Mage::getResourceModel('M2ePro/Ebay_Motor_Filter')->getMainTable();
 
         $connWrite = Mage::getSingleton('core/resource')->getConnection('core/write');
-        $connWrite->update($tableName, array(
+        $connWrite->update(
+            $tableName, array(
                 'note' => $note
             ), '`id` IN ('.implode(',', $filtersIds).')'
         );
@@ -269,7 +272,7 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
             unset($items[$itemId]);
         }
 
-        if (count($items) > 0) {
+        if (!empty($items)) {
             $model->setItemsData(Mage::helper('M2ePro/Component_Ebay_Motors')->buildItemsAttributeValue($items));
             $model->save();
         } else {
@@ -322,12 +325,31 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
             $filtersIds = explode(',', $filtersIds);
         }
 
-        /** @var Ess_M2ePro_Model_Mysql4_Ebay_Motor_Filter_Collection $filters */
+        /** @var Ess_M2ePro_Model_Resource_Ebay_Motor_Filter_Collection $filters */
         $filters = Mage::getModel('M2ePro/Ebay_Motor_Filter')->getCollection()
             ->addFieldToFilter('id', array('in' => $filtersIds));
 
         foreach ($filters->getItems() as $filter) {
+            $connRead = Mage::getSingleton('core/resource')->getConnection('core_read');
+            $table = Mage::helper('M2ePro/Module_Database_Structure')
+                ->getTableNameWithPrefix('m2epro_ebay_motor_filter_to_group');
+
+            $select = $connRead->select();
+            $select->from(array('emftg' => $table), array('group_id'))
+                ->where('filter_id IN (?)', $filter->getId());
+
+            $groupIds = Mage::getResourceModel('core/config')->getReadConnection()->fetchCol($select);
+
             $filter->deleteInstance();
+
+            foreach ($groupIds as $groupId) {
+                /** @var Ess_M2ePro_Model_Ebay_Motor_Group $group */
+                $group = Mage::getModel('M2ePro/Ebay_Motor_Group')->load($groupId);
+
+                if (count($group->getFiltersIds()) === 0) {
+                    $group->deleteInstance();
+                }
+            }
         }
 
         $this->getResponse()->setBody(0);
@@ -346,19 +368,22 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
 
         /** @var $connWrite Varien_Db_Adapter_Pdo_Mysql */
         $connWrite = Mage::getSingleton('core/resource')->getConnection('core_write');
-        $coreResourceModel = Mage::getSingleton('core/resource');
 
-        $filterGroupRelation = $coreResourceModel->getTableName('m2epro_ebay_motor_filter_to_group');
+        $filterGroupRelation = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_ebay_motor_filter_to_group');
 
-        $connWrite->delete($filterGroupRelation, array(
+        $connWrite->delete(
+            $filterGroupRelation, array(
             'filter_id in (?)' => $filtersIds,
             'group_id = ?' => $groupId,
-        ));
+            )
+        );
 
         /** @var Ess_M2ePro_Model_Ebay_Motor_Group $model */
         $model = Mage::getModel('M2ePro/Ebay_Motor_Group')->load($groupId);
+        $ids = $model->getFiltersIds();
 
-        if (count($model->getFiltersIds()) == 0) {
+        if (empty($ids)) {
             $model->deleteInstance();
         }
 
@@ -445,7 +470,7 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
             $groupsIds = explode(',', $groupsIds);
         }
 
-        /** @var Ess_M2ePro_Model_Mysql4_Ebay_Motor_Group_Collection $groups */
+        /** @var Ess_M2ePro_Model_Resource_Ebay_Motor_Group_Collection $groups */
         $groups = Mage::getModel('M2ePro/Ebay_Motor_Group')->getCollection()
             ->addFieldToFilter('id', array('in' => $groupsIds));
 
@@ -454,6 +479,14 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         }
 
         $this->getResponse()->setBody(0);
+    }
+
+    // ---------------------------------------
+
+    public function getItemsCountAlertPopupContentAction()
+    {
+        $block = $this->getLayout()->createBlock('M2ePro/adminhtml_ebay_motor_add_item_itemsCountAlertPopup');
+        $this->getResponse()->setBody($block->toHtml());
     }
 
     //########################################
@@ -490,11 +523,13 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
             $groupsIds = explode(',', $groupsIds);
         }
 
-        $attrValue = Mage::helper('M2ePro/Component_Ebay_Motors')->buildAttributeValue(array(
+        $attrValue = Mage::helper('M2ePro/Component_Ebay_Motors')->buildAttributeValue(
+            array(
             'items' => $itemsData,
             'filters' => $filtersIds,
             'groups' => $groupsIds
-        ));
+            )
+        );
 
         $motorsAttribute = Mage::helper('M2ePro/Component_Ebay_Motors')
             ->getAttribute($motorsType);
@@ -513,34 +548,70 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         $helper = Mage::helper('M2ePro/Component_Ebay_Motors');
         $motorsType = $this->getRequest()->getParam('motors_type');
 
+        $tableName = $helper->getDictionaryTable($motorsType);
+        $idKey = $helper->getIdentifierKey($motorsType);
+
         $insertData = $this->getRequest()->getParam('row', array());
         foreach ($insertData as &$item) {
             $item == '' && $item = null;
         }
+
         $insertData['is_custom'] = 1;
 
-        $tableName = $helper->getDictionaryTable($motorsType);
-        $idKey = $helper->getIdentifierKey($motorsType);
+        if ($helper->isTypeBasedOnEpids($motorsType)) {
+            $insertData['scope'] = $helper->getEpidsScopeByType($motorsType);
+        }
 
-        $existedItem = Mage::getSingleton('core/resource')->getConnection('core/read')
+        if ($motorsType == Ess_M2ePro_Helper_Component_Ebay_Motors::TYPE_KTYPE) {
+            if (strlen($insertData['ktype']) > 10) {
+                return $this->getResponse()->setBody(
+                    Mage::helper('M2ePro')->jsonEncode(
+                        array(
+                        'result'  => false,
+                        'message' => Mage::helper('M2ePro')->__('kType identifier is to long.')
+                        )
+                    )
+                );
+            }
+
+            if (!is_numeric($insertData['ktype'])) {
+                return $this->getResponse()->setBody(
+                    Mage::helper('M2ePro')->jsonEncode(
+                        array(
+                        'result'  => false,
+                        'message' => Mage::helper('M2ePro')->__('kType identifier should contain only digits.')
+                        )
+                    )
+                );
+            }
+        }
+
+        $selectStmt = Mage::getSingleton('core/resource')->getConnection('core/read')
             ->select()
             ->from($tableName)
-            ->where("{$idKey} = ?", $insertData[$idKey])
-            ->query()
-            ->fetch();
+            ->where("{$idKey} = ?", $insertData[$idKey]);
+
+        if ($helper->isTypeBasedOnEpids($motorsType)) {
+            $selectStmt->where('scope = ?', $helper->getEpidsScopeByType($motorsType));
+        }
+
+        $existedItem = $selectStmt->query()->fetch();
 
         if ($existedItem) {
-
-            return $this->getResponse()->setBody(json_encode(array(
-                'result'  => false,
-                'message' => Mage::helper('M2ePro')->__('Record with such identifier is already exists.')
-            )));
+            return $this->getResponse()->setBody(
+                Mage::helper('M2ePro')->jsonEncode(
+                    array(
+                    'result'  => false,
+                    'message' => Mage::helper('M2ePro')->__('Record with such identifier is already exists.')
+                    )
+                )
+            );
         }
 
         $connWrite = Mage::getSingleton('core/resource')->getConnection('core/write');
         $connWrite->insert($tableName, $insertData);
 
-        return $this->getResponse()->setBody(json_encode(array('result' => true)));
+        return $this->getResponse()->setBody(Mage::helper('M2ePro')->jsonEncode(array('result' => true)));
     }
 
     public function removeCustomMotorsRecordAction()
@@ -550,20 +621,51 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
         $keyId = $this->getRequest()->getParam('key_id');
 
         if (!$motorsType || !$keyId) {
-
-            return $this->getResponse()->setBody(json_encode(array(
-                'result'  => false,
-                'message' => Mage::helper('M2ePro')->__('The some of required fields are not filled up.')
-            )));
+            return $this->getResponse()->setBody(
+                Mage::helper('M2ePro')->jsonEncode(
+                    array(
+                    'result'  => false,
+                    'message' => Mage::helper('M2ePro')->__('The some of required fields are not filled up.')
+                    )
+                )
+            );
         }
 
         $tableName = $helper->getDictionaryTable($motorsType);
         $idKey = $helper->getIdentifierKey($motorsType);
 
         $connWrite = Mage::getSingleton('core/resource')->getConnection('core/write');
-        $connWrite->delete($tableName, array("{$idKey} = ?" => $keyId));
+        $conditions = array("{$idKey} = ?" => $keyId);
+        if ($helper->isTypeBasedOnEpids($motorsType)) {
+            $conditions['scope = ?'] = $helper->getEpidsScopeByType($motorsType);
+        }
 
-        return $this->getResponse()->setBody(json_encode(array('result' => true)));
+        $connWrite->delete($tableName, $conditions);
+
+        $table = Mage::helper('M2ePro/Module_Database_Structure')->getTableNameWithPrefix('m2epro_ebay_motor_group');
+
+        $select = $connWrite->select();
+        $select->from(array('emg' => $table), array('id'))
+            ->where('items_data REGEXP ?', '"ITEM"\|"'.$keyId.'"');
+
+        $groupIds = $connWrite->fetchCol($select);
+
+        foreach ($groupIds as $groupId) {
+            /** @var Ess_M2ePro_Model_Ebay_Motor_Group $group */
+            $group = Mage::getModel('M2ePro/Ebay_Motor_Group')->load($groupId);
+
+            $items = $group->getItems();
+            unset($items[$keyId]);
+
+            if (!empty($items)) {
+                $group->setItemsData(Mage::helper('M2ePro/Component_Ebay_Motors')->buildItemsAttributeValue($items));
+                $group->save();
+            } else {
+                $group->deleteInstance();
+            }
+        }
+
+        return $this->getResponse()->setBody(Mage::helper('M2ePro')->jsonEncode(array('result' => true)));
     }
 
     //########################################
@@ -571,7 +673,7 @@ class Ess_M2ePro_Adminhtml_Ebay_MotorController extends Ess_M2ePro_Controller_Ad
     public function closeInstructionAction()
     {
         Mage::helper('M2ePro/Module')->getCacheConfig()
-            ->setGroupValue('/ebay/motors/','was_instruction_shown', 1);
+            ->setGroupValue('/ebay/motors/', 'was_instruction_shown', 1);
     }
 
     //########################################

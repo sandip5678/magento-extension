@@ -2,14 +2,12 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminhtml_Block_Widget_Form_Container
 {
-    private $isEdit = false;
-
     //########################################
 
     public function __construct()
@@ -30,12 +28,31 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
 
         // Set header text
         // ---------------------------------------
-        if ($listing) {
-            $this->_headerText = Mage::helper('M2ePro')->__('Edit Listing Settings "%listing_title%"',
-                                                            $listing->getTitle());
+        if (!Mage::helper('M2ePro/Component')->isSingleActiveComponent()) {
+            $componentName = Mage::helper('M2ePro/Component_Ebay')->getTitle();
+
+            if ($listing) {
+                $this->_headerText = Mage::helper('M2ePro')->__(
+                    'Edit %component_name% Listing Settings "%listing_title%"', $componentName,
+                    $listing->getTitle()
+                );
+            } else {
+                $this->_headerText = Mage::helper('M2ePro')->__(
+                    '%component_name% / Creating A New M2E Pro Listing',
+                    $componentName
+                );
+            }
         } else {
-            $this->_headerText = Mage::helper('M2ePro')->__('Creating A New M2E Pro Listing');
+            if ($listing) {
+                $this->_headerText = Mage::helper('M2ePro')->__(
+                    'Edit Listing Settings "%listing_title%"',
+                    $listing->getTitle()
+                );
+            } else {
+                $this->_headerText = Mage::helper('M2ePro')->__('Creating A New M2E Pro Listing');
+            }
         }
+
         // ---------------------------------------
 
         // Set buttons actions
@@ -56,11 +73,13 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
                 $url = Mage::helper('M2ePro')->getBackUrl();
             }
 
-            $this->_addButton('back', array(
+            $this->_addButton(
+                'back', array(
                 'label'     => Mage::helper('M2ePro')->__('Back'),
                 'onclick'   => 'CommonHandlerObj.back_click(\'' . $url . '\')',
                 'class'     => 'back'
-            ));
+                )
+            );
             // ---------------------------------------
 
             // ---------------------------------------
@@ -75,16 +94,19 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
                 )
             );
             $callback = 'function(params) { CommonHandlerObj.postForm(\''.$url.'\', params); }';
-            $this->_addButton('save', array(
+            $this->_addButton(
+                'save', array(
                 'label'     => Mage::helper('M2ePro')->__('Save'),
                 'onclick'   => 'EbayListingTemplateSwitcherHandlerObj.saveSwitchers(' . $callback . ')',
                 'class'     => 'save'
-            ));
+                )
+            );
             // ---------------------------------------
 
             // ---------------------------------------
             $backUrl = Mage::helper('M2ePro')->makeBackUrlParam('*/adminhtml_ebay_template/editListing');
-            $url = $this->getUrl('*/adminhtml_ebay_template/saveListing',
+            $url = $this->getUrl(
+                '*/adminhtml_ebay_template/saveListing',
                 array(
                     'id' => $listing->getId(),
                     'back' => $backUrl
@@ -92,11 +114,13 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
             );
 
             $callback = 'function(params) { CommonHandlerObj.postForm(\''.$url.'\', params); }';
-            $this->_addButton('save_and_continue', array(
+            $this->_addButton(
+                'save_and_continue', array(
                 'label'     => Mage::helper('M2ePro')->__('Save And Continue Edit'),
                 'onclick'   => 'EbayListingTemplateSwitcherHandlerObj.saveSwitchers(' . $callback . ')',
                 'class'     => 'save'
-            ));
+                )
+            );
             // ---------------------------------------
         }
 
@@ -112,11 +136,13 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
                     '*/adminhtml_ebay_listing_create/index',
                     array('_current' => true, 'step' => $prevStep)
                 );
-                $this->_addButton('back', array(
+                $this->_addButton(
+                    'back', array(
                     'label'     => Mage::helper('M2ePro')->__('Previous Step'),
                     'onclick'   => 'CommonHandlerObj.back_click(\'' . $url . '\')',
                     'class'     => 'back'
-                ));
+                    )
+                );
                 // ---------------------------------------
             }
 
@@ -126,19 +152,21 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
             $sessionData = Mage::helper('M2ePro/Data_Session')->getValue($sessionKey);
             if ($currentStep == 4 && isset($sessionData['creation_mode']) && $sessionData['creation_mode'] ===
                 Ess_M2ePro_Helper_View::LISTING_CREATION_MODE_LISTING_ONLY) {
-
                 $nextStepBtnText = 'Complete';
             }
+
             // ---------------------------------------
             $url = $this->getUrl(
                 '*/adminhtml_ebay_listing_create/index', array('_current' => true, 'step' => $currentStep)
             );
             $callback = 'function(params) { CommonHandlerObj.postForm(\''.$url.'\', params); }';
-            $this->_addButton('save', array(
+            $this->_addButton(
+                'save', array(
                 'label'     => Mage::helper('M2ePro')->__($nextStepBtnText),
                 'onclick'   => 'EbayListingTemplateSwitcherHandlerObj.saveSwitchers(' . $callback . ')',
                 'class'     => 'next'
-            ));
+                )
+            );
             // ---------------------------------------
         }
     }
@@ -187,7 +215,9 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
 
         // initiate template switcher url
         // ---------------------------------------
-        $html .= Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Switcher::getSwitcherUrlHtml();
+        $html .= Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Switcher::getSwitcherUrlHtml(
+            Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Switcher::MODE_COMMON
+        );
         // ---------------------------------------
 
         // ---------------------------------------
@@ -210,6 +240,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
                 )
             )->toHtml();
         }
+
         // ---------------------------------------
 
         // hide tabs selector if only one tab is allowed for displaying
@@ -223,6 +254,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Template_Edit extends Mage_Adminht
 </script>
 HTML;
         }
+
         // ---------------------------------------
 
         return $html . $headerHtml . $tabs->toHtml() . parent::getFormHtml();

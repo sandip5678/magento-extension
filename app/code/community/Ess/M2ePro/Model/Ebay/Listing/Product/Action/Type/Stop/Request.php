@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -23,7 +23,17 @@ class Ess_M2ePro_Model_Ebay_Listing_Product_Action_Type_Stop_Request
 
     //########################################
 
-    protected function initializeVariations() {}
+    protected function initializeVariations()
+    {
+        return null;
+    }
+
+    // ---------------------------------------
+
+    protected function prepareFinalData(array $data)
+    {
+        return $data;
+    }
 
     //########################################
 }

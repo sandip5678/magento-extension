@@ -2,21 +2,21 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
 {
     /**
-     * @var $magentoProduct Ess_M2ePro_Model_Magento_Product
+     * @var $_magentoProduct Ess_M2ePro_Model_Magento_Product
      */
-    private $magentoProduct;
+    protected $_magentoProduct;
 
     /**
-     * @var $shippingTemplateModel Ess_M2ePro_Model_Ebay_Template_Shipping
+     * @var $_shippingTemplateModel Ess_M2ePro_Model_Ebay_Template_Shipping
      */
-    private $shippingTemplateModel;
+    protected $_shippingTemplateModel;
 
     //########################################
 
@@ -26,7 +26,7 @@ class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
      */
     public function setMagentoProduct(Ess_M2ePro_Model_Magento_Product $magentoProduct)
     {
-        $this->magentoProduct = $magentoProduct;
+        $this->_magentoProduct = $magentoProduct;
         return $this;
     }
 
@@ -35,7 +35,7 @@ class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
      */
     public function getMagentoProduct()
     {
-        return $this->magentoProduct;
+        return $this->_magentoProduct;
     }
 
     // ---------------------------------------
@@ -46,7 +46,7 @@ class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
      */
     public function setShippingTemplate(Ess_M2ePro_Model_Ebay_Template_Shipping $instance)
     {
-        $this->shippingTemplateModel = $instance;
+        $this->_shippingTemplateModel = $instance;
         return $this;
     }
 
@@ -55,7 +55,7 @@ class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
      */
     public function getShippingTemplate()
     {
-        return $this->shippingTemplateModel;
+        return $this->_shippingTemplateModel;
     }
 
     //########################################
@@ -108,6 +108,22 @@ class Ess_M2ePro_Model_Ebay_Template_Shipping_Source
         }
 
         if ($src['mode'] == Ess_M2ePro_Model_Ebay_Template_Shipping::ADDRESS_MODE_CUSTOM_ATTRIBUTE) {
+            return $this->getMagentoProduct()->getAttributeValue($src['attribute']);
+        }
+
+        return $src['value'];
+    }
+
+    //########################################
+
+    /**
+     * @return string
+     */
+    public function getDispatchTime()
+    {
+        $src = $this->getShippingTemplate()->getDispatchTimeSource();
+
+        if ($src['mode'] == Ess_M2ePro_Model_Ebay_Template_Shipping::DISPATCH_TIME_MODE_ATTRIBUTE) {
             return $this->getMagentoProduct()->getAttributeValue($src['attribute']);
         }
 

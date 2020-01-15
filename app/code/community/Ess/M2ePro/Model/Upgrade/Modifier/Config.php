@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -49,14 +49,14 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
      * @return bool
      * @throws Ess_M2ePro_Model_Exception_Setup
      */
-    public function isExists($group, $key = NULL)
+    public function isExists($group, $key = null)
     {
         $query = $this->getConnection()
                       ->select()
                       ->from($this->getTableName())
                       ->where('`group` = ?', $this->prepareGroup($group));
 
-        if (!is_null($key)) {
+        if ($key !== null) {
             $query->where('`key` = ?', $this->prepareKey($key));
         }
 
@@ -70,12 +70,11 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
      * @param string $group
      * @param string $key
      * @param string|null $value
-     * @param string|null $notice
+     * @param null $notice is not supported. left for backward compatibility
      * @return $this|int
      * @throws Ess_M2ePro_Model_Exception_Setup
-     * @throws Zend_Db_Adapter_Exception
      */
-    public function insert($group, $key, $value = NULL, $notice = NULL)
+    public function insert($group, $key, $value = null, $notice = null)
     {
         if ($this->isExists($group, $key)) {
             return $this;
@@ -86,8 +85,7 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
             'key'   => $this->prepareKey($key),
         );
 
-        !is_null($value) && $preparedData['value'] = $value;
-        !is_null($notice) && $preparedData['notice'] = $notice;
+        $value !== null && $preparedData['value'] = $value;
 
         $preparedData['update_date'] = $this->getCurrentDateTime();
         $preparedData['create_date'] = $this->getCurrentDateTime();
@@ -122,7 +120,7 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
      * @return $this|int
      * @throws Ess_M2ePro_Model_Exception_Setup
      */
-    public function delete($group, $key = NULL)
+    public function delete($group, $key = null)
     {
         if (!$this->isExists($group, $key)) {
             return $this;
@@ -132,7 +130,7 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
             '`group` = ?' => $this->prepareGroup($group)
         );
 
-        if (!is_null($key)) {
+        if ($key !== null) {
             $where['`key` = ?'] = $this->prepareKey($key);
         }
 
@@ -183,13 +181,14 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
         $deleteData = array();
 
         $configRows = $this->getConnection()
-                           ->query("SELECT `id`, `group`, `key`
+                        ->query(
+                            "SELECT `id`, `group`, `key`
                                     FROM `{$this->getTableName()}`
-                                    ORDER BY `id` ASC")
+                                    ORDER BY `id` ASC"
+                        )
                            ->fetchAll();
 
         foreach ($configRows as $configRow) {
-
             $tempName = strtolower($configRow['group'] .'|'. $configRow['key']);
 
             if (in_array($tempName, $tempData)) {
@@ -201,26 +200,32 @@ class Ess_M2ePro_Model_Upgrade_Modifier_Config extends Ess_M2ePro_Model_Upgrade_
 
         if (!empty($deleteData)) {
             $this->getConnection()
-                 ->query("DELETE FROM `{$this->getTableName()}`
-                          WHERE `id` IN (".implode(',', $deleteData).')');
+                ->query(
+                    "DELETE FROM `{$this->getTableName()}`
+                          WHERE `id` IN (".implode(',', $deleteData).')'
+                );
         }
     }
 
     //########################################
 
-    private function prepareGroup($group)
+    protected function prepareGroup($group)
     {
+        if ($group === null) {
+            return $group;
+        }
+
         return '/' . trim($group, '/ ') . '/';
     }
 
-    private function prepareKey($key)
+    protected function prepareKey($key)
     {
         return trim($key, '/ ');
     }
 
     //########################################
 
-    private function getCurrentDateTime()
+    protected function getCurrentDateTime()
     {
         return date('Y-m-d H:i:s', gmdate('U'));
     }

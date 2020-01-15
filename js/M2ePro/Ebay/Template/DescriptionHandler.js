@@ -17,11 +17,6 @@ EbayTemplateDescriptionHandler.prototype = Object.extend(new CommonHandler(), {
 
     // ---------------------------------------
 
-    simple_mode_disallowed_hide: function()
-    {
-        $$('#template_description_data_container .simple_mode_disallowed').invoke('hide');
-    },
-
     duplicate_click: function(headId, chapter_when_duplicate_text, templateNick)
     {
         var watermarkImageContainer = $('watermark_uploaded_image_container');
@@ -354,8 +349,6 @@ EbayTemplateDescriptionHandler.prototype = Object.extend(new CommonHandler(), {
 
         if ($('select_attributes_image').value == 'media_gallery' && $('display_products_images').value == 'gallery_view')  {
             template += '2';
-        } else if ($('image_linked_mode').value == '1') {
-            template += '1';
         } else {
             template += "0";
         }

@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -11,7 +11,7 @@
  */
 class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Edit_General extends Mage_Adminhtml_Block_Widget
 {
-    private $enabledMarketplaces = NULL;
+    protected $_enabledMarketplaces = null;
 
     //########################################
 
@@ -36,7 +36,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Edit_General extends Mage_Adminht
     {
         $template = $this->getParentBlock()->getTemplateObject();
 
-        return $template ? $template->getId() : NULL;
+        return $template ? $template->getId() : null;
     }
 
     public function canDisplayMarketplace()
@@ -49,16 +49,16 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Edit_General extends Mage_Adminht
 
     public function getEnabledMarketplaces()
     {
-        if (is_null($this->enabledMarketplaces)) {
+        if ($this->_enabledMarketplaces === null) {
             $collection = Mage::getModel('M2ePro/Marketplace')->getCollection();
             $collection->addFieldToFilter('component_mode', Ess_M2ePro_Helper_Component_Ebay::NICK);
             $collection->addFieldToFilter('status', Ess_M2ePro_Model_Marketplace::STATUS_ENABLE);
             $collection->setOrder('sorder', 'ASC');
 
-            $this->enabledMarketplaces = $collection;
+            $this->_enabledMarketplaces = $collection;
         }
 
-        return $this->enabledMarketplaces->getItems();
+        return $this->_enabledMarketplaces->getItems();
     }
 
     public function getMarketplaceId()
@@ -69,7 +69,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Edit_General extends Mage_Adminht
             return $template->getData('marketplace_id');
         }
 
-        return NULL;
+        return null;
     }
 
     protected function _beforeToHtml()

@@ -2,21 +2,21 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Amazon_Listing_Source
 {
     /**
-     * @var $magentoProduct Ess_M2ePro_Model_Magento_Product
+     * @var $_magentoProduct Ess_M2ePro_Model_Magento_Product
      */
-    private $magentoProduct = null;
+    protected $_magentoProduct = null;
 
     /**
-     * @var $listing Ess_M2ePro_Model_Listing
+     * @var $_listing Ess_M2ePro_Model_Listing
      */
-    private $listing = null;
+    protected $_listing = null;
 
     //########################################
 
@@ -26,7 +26,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function setMagentoProduct(Ess_M2ePro_Model_Magento_Product $magentoProduct)
     {
-        $this->magentoProduct = $magentoProduct;
+        $this->_magentoProduct = $magentoProduct;
         return $this;
     }
 
@@ -35,7 +35,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function getMagentoProduct()
     {
-        return $this->magentoProduct;
+        return $this->_magentoProduct;
     }
 
     // ---------------------------------------
@@ -46,7 +46,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function setListing(Ess_M2ePro_Model_Listing $listing)
     {
-        $this->listing = $listing;
+        $this->_listing = $listing;
         return $this;
     }
 
@@ -55,7 +55,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function getListing()
     {
-        return $this->listing;
+        return $this->_listing;
     }
 
     /**
@@ -129,12 +129,12 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
         $src = $this->getAmazonListing()->getGeneralIdSource();
 
         if ($src['mode'] == Ess_M2ePro_Model_Amazon_Listing::GENERAL_ID_MODE_NOT_SET) {
-            $result = NULL;
+            $result = null;
         }
 
         if ($src['mode'] == Ess_M2ePro_Model_Amazon_Listing::GENERAL_ID_MODE_CUSTOM_ATTRIBUTE) {
             $result = $this->getMagentoProduct()->getAttributeValue($src['attribute']);
-            $result = str_replace('-','',$result);
+            $result = str_replace('-', '', $result);
         }
 
         is_string($result) && $result = trim($result);
@@ -151,12 +151,12 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
         $src = $this->getAmazonListing()->getWorldwideIdSource();
 
         if ($src['mode'] == Ess_M2ePro_Model_Amazon_Listing::WORLDWIDE_ID_MODE_NOT_SET) {
-            $result = NULL;
+            $result = null;
         }
 
         if ($src['mode'] == Ess_M2ePro_Model_Amazon_Listing::WORLDWIDE_ID_MODE_CUSTOM_ATTRIBUTE) {
             $result = $this->getMagentoProduct()->getAttributeValue($src['attribute']);
-            $result = str_replace('-','',$result);
+            $result = str_replace('-', '', $result);
         }
 
         is_string($result) && $result = trim($result);
@@ -248,26 +248,26 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
     // ---------------------------------------
 
     /**
-     * @return string
+     * @return Ess_M2ePro_Model_Magento_Product_Image|null
      */
-    public function getMainImageLink()
+    public function getMainImage()
     {
-        $imageLink = '';
+        $image = null;
 
         if ($this->getAmazonListing()->isImageMainModeProduct()) {
-            $imageLink = $this->getMagentoProduct()->getImageLink('image');
+            $image = $this->getMagentoProduct()->getImage('image');
         }
 
         if ($this->getAmazonListing()->isImageMainModeAttribute()) {
             $src = $this->getAmazonListing()->getImageMainSource();
-            $imageLink = $this->getMagentoProduct()->getImageLink($src['attribute']);
+            $image = $this->getMagentoProduct()->getImage($src['attribute']);
         }
 
-        return $imageLink;
+        return $image;
     }
 
     /**
-     * @return array|string
+     * @return Ess_M2ePro_Model_Magento_Product_Image[]
      */
     public function getGalleryImages()
     {
@@ -301,16 +301,12 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
             }
         }
 
-        $mainImage = $this->getMainImageLink();
-
-        if ($mainImage == '') {
+        if (!$mainImage = $this->getMainImage()) {
             return array();
         }
 
-        $mainImage = array($mainImage);
-
         if ($this->getAmazonListing()->isGalleryImagesModeNone()) {
-            return $mainImage;
+            return array($mainImage);
         }
 
         $galleryImages = array();
@@ -318,39 +314,51 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
         $limitGalleryImages = Ess_M2ePro_Model_Amazon_Listing::GALLERY_IMAGES_COUNT_MAX;
 
         if ($this->getAmazonListing()->isGalleryImagesModeProduct()) {
-
             $limitGalleryImages = (int)$gallerySource['limit'];
-            $galleryImages = $this->getMagentoProduct()->getGalleryImagesLinks($limitGalleryImages + 1);
-        }
+            $galleryImagesTemp = $this->getMagentoProduct()->getGalleryImages($limitGalleryImages + 1);
 
-        if ($this->getAmazonListing()->isGalleryImagesModeAttribute()) {
-
-            $limitGalleryImages = Ess_M2ePro_Model_Amazon_Listing::GALLERY_IMAGES_COUNT_MAX;
-            $galleryImagesTemp = $this->getMagentoProduct()->getAttributeValue($gallerySource['attribute']);
-
-            $galleryImagesTemp = (array)explode(',', $galleryImagesTemp);
-            foreach ($galleryImagesTemp as $tempImageLink) {
-
-                $tempImageLink = trim($tempImageLink);
-                if (!empty($tempImageLink)) {
-                    $galleryImages[] = $tempImageLink;
+            foreach ($galleryImagesTemp as $image) {
+                if (array_key_exists($image->getHash(), $galleryImages)) {
+                    continue;
                 }
+
+                $galleryImages[$image->getHash()] = $image;
             }
         }
 
-        $galleryImages = array_unique($galleryImages);
+        if ($this->getAmazonListing()->isGalleryImagesModeAttribute()) {
+            $limitGalleryImages = Ess_M2ePro_Model_Amazon_Listing::GALLERY_IMAGES_COUNT_MAX;
 
-        if (count($galleryImages) <= 0) {
-            return $mainImage;
+            $galleryImagesTemp = $this->getMagentoProduct()->getAttributeValue($gallerySource['attribute']);
+            $galleryImagesTemp = (array)explode(',', $galleryImagesTemp);
+
+            foreach ($galleryImagesTemp as $tempImageLink) {
+                $tempImageLink = trim($tempImageLink);
+                if (empty($tempImageLink)) {
+                    continue;
+                }
+
+                $image = new Ess_M2ePro_Model_Magento_Product_Image($tempImageLink);
+                $image->setStoreId($this->getMagentoProduct()->getStoreId());
+
+                if (array_key_exists($image->getHash(), $galleryImages)) {
+                    continue;
+                }
+
+                $galleryImages[$image->getHash()] = $image;
+            }
         }
 
-        $mainImagePosition = array_search($mainImage[0], $galleryImages);
-        if ($mainImagePosition !== false) {
-            unset($galleryImages[$mainImagePosition]);
+        unset($galleryImages[$mainImage->getHash()]);
+
+        if (empty($galleryImages)) {
+            return array($mainImage);
         }
 
-        $galleryImages = array_slice($galleryImages,0,$limitGalleryImages);
-        return array_merge($mainImage, $galleryImages);
+        $galleryImages = array_slice($galleryImages, 0, $limitGalleryImages);
+        array_unshift($galleryImages, $mainImage);
+
+        return $galleryImages;
     }
 
     // ---------------------------------------
@@ -360,7 +368,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function getGiftWrap()
     {
-        $result = NULL;
+        $result = null;
         $src = $this->getAmazonListing()->getGiftWrapSource();
 
         if ($this->getAmazonListing()->isGiftWrapModeYes()) {
@@ -391,7 +399,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Source
      */
     public function getGiftMessage()
     {
-        $result = NULL;
+        $result = null;
         $src = $this->getAmazonListing()->getGiftMessageSource();
 
         if ($this->getAmazonListing()->isGiftMessageModeYes()) {

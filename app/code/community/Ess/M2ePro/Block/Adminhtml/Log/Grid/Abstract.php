@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -12,6 +12,9 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
     const LISTING_ID_FIELD = 'listing_id';
     const LISTING_PRODUCT_ID_FIELD = 'listing_product_id';
     const LISTING_PARENT_PRODUCT_ID_FIELD = 'parent_listing_product_id';
+
+    /** @var Ess_M2ePro_Model_Listing_Product $_listingProduct */
+    protected $_listingProduct;
 
     //########################################
 
@@ -25,7 +28,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
             return $this->getRequest()->getParam('listing_product_id');
         }
 
-        return NULL;
+        return null;
     }
 
     protected function getEntityField()
@@ -38,7 +41,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
             return self::LISTING_PRODUCT_ID_FIELD;
         }
 
-        return NULL;
+        return null;
     }
 
     protected function getActionName()
@@ -46,13 +49,11 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
         switch ($this->getEntityField()) {
             case self::LISTING_ID_FIELD:
                 return 'listingGrid';
-                break;
 
             case self::LISTING_PRODUCT_ID_FIELD:
                 return 'listingProductGrid';
-                break;
-
         }
+
         return 'listingGrid';
     }
 
@@ -72,6 +73,26 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
 
     //########################################
 
+    protected function addMaxAllowedLogsCountExceededNotification($date)
+    {
+        $notification = Mage::helper('M2ePro')->__(
+            'Using a Grouped View Mode, the logs records which are not older than %date% are
+            displayed here in order to prevent any possible Performance-related issues.',
+            $this->formatDate($date, IntlDateFormatter::MEDIUM, true)
+        );
+
+        $this->getMessagesBlock()->addNotice($notification);
+    }
+
+    protected function getMaxRecordsCount()
+    {
+        return Mage::helper('M2ePro/Module')->getConfig()->getGroupValue(
+            '/logs/grouped/', 'max_records_count'
+        );
+    }
+
+    //########################################
+
     public function getListingProductId()
     {
         return $this->getRequest()->getParam('listing_product_id', false);
@@ -79,20 +100,31 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
 
     // ---------------------------------------
 
-    /** @var Ess_M2ePro_Model_Listing_Product $listingProduct */
-    protected $listingProduct = NULL;
-
     /**
      * @return Ess_M2ePro_Model_Listing_Product|null
      */
     public function getListingProduct()
     {
-        if (is_null($this->listingProduct)) {
-            $this->listingProduct = Mage::helper('M2ePro/Component')
-                ->getUnknownObject('Listing_Product', $this->getListingProductId());
+        if ($this->_listingProduct === null) {
+            $this->_listingProduct = Mage::helper('M2ePro/Component')
+                                         ->getUnknownObject('Listing_Product', $this->getListingProductId());
         }
 
-        return $this->listingProduct;
+        return $this->_listingProduct;
+    }
+
+    //########################################
+
+    protected function _setCollectionOrder($column)
+    {
+        // We need to sort by id to maintain the correct sequence of records
+        $collection = $this->getCollection();
+        if ($collection) {
+            $columnIndex = $column->getFilterIndex() ? $column->getFilterIndex() : $column->getIndex();
+            $collection->getSelect()->order($columnIndex . ' ' . strtoupper($column->getDir()))->order('id DESC');
+        }
+
+        return $this;
     }
 
     //########################################
@@ -129,7 +161,6 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
     public function callbackColumnType($value, $row, $column, $isExport)
     {
          switch ($row->getData('type')) {
-
             case Ess_M2ePro_Model_Log_Abstract::TYPE_NOTICE:
                 break;
 
@@ -147,7 +178,7 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
 
             default:
                 break;
-        }
+         }
 
         return $value;
     }
@@ -155,7 +186,6 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
     public function callbackColumnInitiator($value, $row, $column, $isExport)
     {
         switch ($row->getData('initiator')) {
-
             case Ess_M2ePro_Helper_Data::INITIATOR_EXTENSION:
                 $value = '<span style="text-decoration: underline;">'.$value.'</span>';
                 break;
@@ -171,21 +201,23 @@ abstract class Ess_M2ePro_Block_Adminhtml_Log_Grid_Abstract
     {
         $fullDescription = Mage::helper('M2ePro/View')->getModifiedLogMessage($row->getData('description'));
 
-        $row->setData('description', $fullDescription);
-        $renderedText = $column->getRenderer()->render($row);
+        $renderedText = $this->stripTags($fullDescription);
 
-        if (strlen($fullDescription) == strlen($renderedText)) {
-            return $renderedText;
+        if (strlen($renderedText) < 200) {
+            return $fullDescription;
         }
 
-        $row->setData('description', strip_tags($fullDescription));
-        $renderedText = $column->getRenderer()->render($row);
+        $renderedText =  Mage::helper('core/string')->truncate($renderedText, 200, '');
 
         $renderedText .= '&nbsp;(<a href="javascript:void(0)" onclick="LogHandlerObj.showFullText(this);">more</a>)
                           <div style="display: none;"><br/>'.$fullDescription.'<br/><br/></div>';
 
         return $renderedText;
     }
+
+    //########################################
+
+    abstract protected function getActionTitles();
 
     //########################################
 }

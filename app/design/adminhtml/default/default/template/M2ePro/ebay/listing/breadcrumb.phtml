@@ -1,8 +1,21 @@
+<?php
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/** @var $this Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Breadcrumb */
+
+?>
+
 <style type="text/css">
     div.breadcrumb {
         padding: 12px 0;
         color: #AAAAAA;
-        width: <?php if (Mage::helper('M2ePro/View_Ebay')->isAdvancedMode()) echo '24.8%'; else  echo '33.1%'; ?>;
+        width: 24.8%;
         font-size: 14px;
         text-align: center;
         background: #e7efef;
@@ -57,7 +70,7 @@
 
     <div class="left" style="width: 3px; height: 1px"></div>
 
-    <div id="step_4" class="left breadcrumb <?php if ($this->getStep() == 4) echo 'selected' ?>" <?php if (Mage::helper('M2ePro/View_Ebay')->isSimpleMode()) echo 'style="display: none"' ?>>
+    <div id="step_4" class="left breadcrumb <?php if ($this->getStep() == 4) echo 'selected' ?>">
 
         <span class="<?php if ($this->getStep() == 4) echo 'selected' ?>">
             <?php echo Mage::helper('M2ePro')->__('Step 4') ?>:

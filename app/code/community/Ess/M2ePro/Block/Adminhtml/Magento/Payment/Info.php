@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block_Info
 {
-    private $order = NULL;
+    protected $_order = null;
 
     //########################################
 
@@ -20,9 +20,9 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
 
     //########################################
 
-    private function getAdditionalData($key = '')
+    protected function getAdditionalData($key = '')
     {
-        $additionalData = @unserialize($this->getInfo()->getAdditionalData());
+        $additionalData = Mage::helper('M2ePro')->unserialize($this->getInfo()->getAdditionalData());
 
         if ($key === '') {
             return $additionalData;
@@ -41,9 +41,10 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
         if (isset($additionalData[$backwardCompatibleKey])) {
             return $additionalData[$backwardCompatibleKey];
         }
+
         // ---------------------------------------
 
-        return isset($additionalData[$key]) ? $additionalData[$key] : NULL;
+        return isset($additionalData[$key]) ? $additionalData[$key] : null;
     }
 
     /**
@@ -51,24 +52,24 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
      */
     public function getOrder()
     {
-        if (is_null($this->order)) {
+        if ($this->_order === null) {
             // do not replace registry with our wrapper
             if ($this->hasOrder()) {
-                $this->order = $this->getOrder();
+                $this->_order = $this->getOrder();
             } elseif (Mage::registry('current_order')) {
-                $this->order = Mage::registry('current_order');
+                $this->_order = Mage::registry('current_order');
             } elseif (Mage::registry('order')) {
-                $this->order = Mage::registry('order');
+                $this->_order = Mage::registry('order');
             } elseif (Mage::registry('current_invoice')) {
-                $this->order = Mage::registry('current_invoice')->getOrder();
+                $this->_order = Mage::registry('current_invoice')->getOrder();
             } elseif (Mage::registry('current_shipment')) {
-                $this->order = Mage::registry('current_shipment')->getOrder();
+                $this->_order = Mage::registry('current_shipment')->getOrder();
             } elseif (Mage::registry('current_creditmemo')) {
-                $this->order = Mage::registry('current_creditmemo')->getOrder();
+                $this->_order = Mage::registry('current_creditmemo')->getOrder();
             }
         }
 
-        return $this->order;
+        return $this->_order;
     }
 
     public function getPaymentMethod()
@@ -92,13 +93,15 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
 
         switch ($this->getAdditionalData('component_mode')) {
             case Ess_M2ePro_Helper_Component_Ebay::NICK:
-            case Ess_M2ePro_Helper_Component_Buy::NICK:
+            case Ess_M2ePro_Helper_Component_Walmart::NICK:
                 break;
             case Ess_M2ePro_Helper_Component_Amazon::NICK:
                 if ($this->getOrder()) {
-                    $url = Mage::helper('adminhtml')->getUrl('M2ePro/adminhtml_common_amazon_order/goToAmazon', array(
+                    $url = Mage::helper('adminhtml')->getUrl(
+                        'M2ePro/adminhtml_amazon_order/goToAmazon', array(
                         'magento_order_id' => $this->getOrder()->getId()
-                    ));
+                        )
+                    );
                 }
                 break;
         }
@@ -109,6 +112,11 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
     public function getChannelFinalFee()
     {
         return !$this->getIsSecureMode() ? (float)$this->getAdditionalData('channel_final_fee') : 0;
+    }
+
+    public function getCashOnDeliveryCost()
+    {
+        return !$this->getIsSecureMode() ? (float)$this->getAdditionalData('cash_on_delivery_cost') : 0;
     }
 
     public function getChannelTitle()
@@ -132,26 +140,20 @@ class Ess_M2ePro_Block_Adminhtml_Magento_Payment_Info extends Mage_Payment_Block
         return $this->toHtml();
     }
 
-    /**
-     * Render block
-     * @return string
-     */
-    public function renderView()
+    protected function _toHtml()
     {
-        $design = Mage::getDesign();
+        // Start store emulation process
+        $appEmulation = Mage::getSingleton('core/app_emulation');
+        $initialEnvironmentInfo = $appEmulation->startEnvironmentEmulation(
+            Mage_Core_Model_App::ADMIN_STORE_ID, Mage_Core_Model_App_Area::AREA_ADMINHTML
+        );
 
-        $oldArea = $design->getArea();
-        $oldPackageName = $design->getPackageName();
+        $html = parent::_toHtml();
 
-        $design->setArea('adminhtml');
-        $design->setPackageName(Mage::getStoreConfig('design/package/name', Mage::app()->getStore()->getId()));
+        // Stop store emulation process
+        $appEmulation->stopEnvironmentEmulation($initialEnvironmentInfo);
 
-        $result = parent::renderView();
-
-        $design->setArea($oldArea);
-        $design->setPackageName($oldPackageName);
-
-        return $result;
+        return $html;
     }
 
     //########################################

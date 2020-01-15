@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -22,13 +22,15 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
     public function getDomain()
     {
+        $server = Mage::app()->getRequest()->getServer();
+
         $domain = Mage::helper('M2ePro/Module')->getCacheConfig()->getGroupValue('/location_info/', 'domain');
-        if (is_null($domain) && isset($_SERVER['HTTP_HOST'])) {
-            $domain = rtrim($_SERVER['HTTP_HOST'], '/');
+        if ($domain === null && isset($server['HTTP_HOST'])) {
+            $domain = rtrim($server['HTTP_HOST'], '/');
         }
 
-        if (!is_null($domain)) {
-            strpos($domain,'www.') === 0 && $domain = substr($domain,4);
+        if ($domain !== null) {
+            strpos($domain, 'www.') === 0 && $domain = substr($domain, 4);
             return strtolower(trim($domain));
         }
 
@@ -37,16 +39,18 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
     public function getIp()
     {
+        $server = Mage::app()->getRequest()->getServer();
+
         $backupIp = Mage::helper('M2ePro/Module')->getCacheConfig()->getGroupValue('/location_info/', 'ip');
 
-        if (!is_null($backupIp)) {
+        if ($backupIp !== null) {
             return strtolower(trim($backupIp));
         }
 
-        $serverIp = isset($_SERVER['SERVER_ADDR']) ? $_SERVER['SERVER_ADDR'] : NULL;
-        is_null($serverIp) && $serverIp = isset($_SERVER['LOCAL_ADDR']) ? $_SERVER['LOCAL_ADDR'] : NULL;
+        $serverIp = isset($server['SERVER_ADDR']) ? $server['SERVER_ADDR'] : null;
+        $serverIp === null && $serverIp = isset($server['LOCAL_ADDR']) ? $server['LOCAL_ADDR'] : null;
 
-        if (!is_null($serverIp)) {
+        if ($serverIp !== null) {
             return strtolower(trim($serverIp));
         }
 
@@ -58,7 +62,7 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         $backupDirectory = Mage::helper('M2ePro/Module')->getCacheConfig()
                                     ->getGroupValue('/location_info/', 'directory');
 
-        if (!is_null($backupDirectory)) {
+        if ($backupDirectory !== null) {
             return $backupDirectory;
         }
 
@@ -67,9 +71,12 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
     public function isBrowserIE()
     {
-        if (isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'], 'MSIE') !== false) {
+        $server = Mage::app()->getRequest()->getServer();
+
+        if (isset($server['HTTP_USER_AGENT']) && strpos($server['HTTP_USER_AGENT'], 'MSIE') !== false) {
             return true;
         }
+
         return false;
     }
 
@@ -77,10 +84,12 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
     public function updateBackupConnectionData($forceUpdate = false)
     {
+        $server = Mage::app()->getRequest()->getServer();
+
         $dateLastCheck = Mage::helper('M2ePro/Module')->getCacheConfig()
                                 ->getGroupValue('/location_info/', 'date_last_check');
 
-        if (is_null($dateLastCheck)) {
+        if ($dateLastCheck === null) {
             $dateLastCheck = Mage::helper('M2ePro')->getCurrentGmtDate(true)-60*60*365;
         } else {
             $dateLastCheck = strtotime($dateLastCheck);
@@ -90,13 +99,13 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
             return;
         }
 
-        $domainBackup = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '127.0.0.1';
-        strpos($domainBackup,'www.') === 0 && $domainBackup = substr($domainBackup,4);
+        $domainBackup = isset($server['HTTP_HOST']) ? $server['HTTP_HOST'] : '127.0.0.1';
+        strpos($domainBackup, 'www.') === 0 && $domainBackup = substr($domainBackup, 4);
         Mage::helper('M2ePro/Module')->getCacheConfig()
             ->setGroupValue('/location_info/', 'domain', $domainBackup);
 
-        $ipBackup = isset($_SERVER['SERVER_ADDR']) ? $_SERVER['SERVER_ADDR'] : NULL;
-        is_null($ipBackup) && $ipBackup = isset($_SERVER['LOCAL_ADDR']) ? $_SERVER['LOCAL_ADDR'] : '127.0.0.1';
+        $ipBackup = isset($server['SERVER_ADDR']) ? $server['SERVER_ADDR'] : null;
+        $ipBackup === null && $ipBackup = isset($server['LOCAL_ADDR']) ? $server['LOCAL_ADDR'] : '127.0.0.1';
         Mage::helper('M2ePro/Module')->getCacheConfig()
             ->setGroupValue('/location_info/', 'ip', $ipBackup);
 
@@ -113,19 +122,28 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
     public function getSystem()
     {
-        return php_uname();
+        return PHP_OS;
     }
 
     // ---------------------------------------
 
-    public function getPhpVersion()
+    public function getPhpVersion($asArray = false)
     {
-        return @phpversion();
+        $version = array(
+            PHP_MAJOR_VERSION, PHP_MINOR_VERSION, PHP_RELEASE_VERSION
+        );
+
+        return $asArray ? $version : implode('.', $version);
     }
 
     public function getPhpApiName()
     {
-        return @php_sapi_name();
+        return PHP_SAPI;
+    }
+
+    public function getPhpIniFileLoaded()
+    {
+        return @php_ini_loaded_file();
     }
 
     // ---------------------------------------
@@ -145,20 +163,23 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
     public function getPhpSettings()
     {
         return array(
-            'memory_limit' => $this->getMemoryLimit(),
-            'max_execution_time' => $this->isPhpApiApacheHandler() ? @ini_get('max_execution_time') : null,
-            'phpinfo' => $this->getPhpInfoArray()
+            'memory_limit'       => $this->getMemoryLimit(),
+            'max_execution_time' => $this->getExecutionTime(),
+            'phpinfo'            => $this->getPhpInfoArray()
         );
     }
 
     public function getPhpInfoArray()
     {
-        try {
+        if (in_array('phpinfo', $this->getDisabledFunctions())) {
+            return array();
+        }
 
+        try {
             ob_start(); phpinfo(INFO_ALL);
 
             $pi = preg_replace(
-            array(
+                array(
                 '#^.*<body>(.*)</body>.*$#m', '#<h2>PHP License</h2>.*$#ms',
                 '#<h1>Configuration</h1>#',  "#\r?\n#", "#</(h1|h2|h3|tr)>#", '# +<#',
                 "#[ \t]+#", '#&nbsp;#', '#  +#', '# class=".*?"#', '%&#039;%',
@@ -166,14 +187,14 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
                 '#<h1><a href="(?:.*?)\?=(.*?)">PHP Credits</a></h1>#',
                 '#<tr>(?:.*?)" src="(?:.*?)=(.*?)"(?:.*?)Zend Engine (.*?),(?:.*?)</tr>#',
                 "# +#", '#<tr>#', '#</tr>#'),
-            array(
+                array(
                 '$1', '', '', '', '</$1>' . "\n", '<', ' ', ' ', ' ', '', ' ',
                 '<h2>PHP Configuration</h2>'."\n".'<tr><td>PHP Version</td><td>$2</td></tr>'.
                 "\n".'<tr><td>PHP Egg</td><td>$1</td></tr>',
                 '<tr><td>PHP Credits Egg</td><td>$1</td></tr>',
                 '<tr><td>Zend Engine</td><td>$2</td></tr>' . "\n" .
                 '<tr><td>Zend Egg</td><td>$1</td></tr>', ' ', '%S%', '%E%'
-            ), ob_get_clean()
+                ), ob_get_clean()
             );
 
             $sections = explode('<h2>', strip_tags($pi, '<h2><th><td>'));
@@ -192,10 +213,10 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
                     if (!isset($m[0]) || !isset($m[1]) || !isset($m[2])) {
                         continue;
                     }
-                    $pi[$n][$m[1]]=(!isset($m[3])||$m[2]==$m[3])?$m[2]:array_slice($m,2);
+
+                    $pi[$n][$m[1]]=(!isset($m[3])||$m[2]==$m[3])?$m[2]:array_slice($m, 2);
                 }
             }
-
         } catch (Exception $exception) {
             return array();
         }
@@ -231,14 +252,14 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         }
 
         $phpInfo = $this->getPhpInfoArray();
-        $settings = array_merge($settings,isset($phpInfo['mysql'])?$phpInfo['mysql']:array());
+        $settings = array_merge($settings, isset($phpInfo['mysql'])?$phpInfo['mysql']:array());
 
         return $settings;
     }
 
     public function getMysqlTotals()
     {
-        $moduleTables = Mage::helper('M2ePro/Module_Database_Structure')->getMySqlTables();
+        $moduleTables = Mage::helper('M2ePro/Module_Database_Structure')->getModuleTables();
         $magentoTables = Mage::helper('M2ePro/Magento')->getMySqlTables();
 
         /** @var $connRead Varien_Db_Adapter_Pdo_Mysql */
@@ -246,12 +267,12 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
 
         $totalRecords = 0;
         foreach ($moduleTables as $moduleTable) {
-            $moduleTable = Mage::getSingleton('core/resource')->getTableName($moduleTable);
+            $moduleTable = Mage::helper('M2ePro/Module_Database_Structure')->getTableNameWithPrefix($moduleTable);
 
             if (!in_array($moduleTable, $magentoTables)) {
                 continue;
             };
-            $dbSelect = $connRead->select()->from($moduleTable,new Zend_Db_Expr('COUNT(*)'));
+            $dbSelect = $connRead->select()->from($moduleTable, new Zend_Db_Expr('COUNT(*)'));
             $totalRecords += (int)$connRead->fetchOne($dbSelect);
         }
 
@@ -273,6 +294,8 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         }
 
         $lastMemoryLimitLetter = strtolower(substr($memoryLimit, -1));
+        $memoryLimit = (int)$memoryLimit;
+
         switch($lastMemoryLimitLetter) {
             case 'g':
                 $memoryLimit *= 1024;
@@ -282,7 +305,7 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
                 $memoryLimit *= 1024;
         }
 
-        if ($inMegabytes) {
+        if ($memoryLimit > 0 && $inMegabytes) {
             $memoryLimit /= 1024 * 1024;
         }
 
@@ -294,13 +317,12 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         $minSize = 32;
         $currentMemoryLimit = $this->getMemoryLimit();
 
-        if ($maxSize < $minSize || (int)$currentMemoryLimit >= $maxSize) {
+        if ($maxSize < $minSize || (int)$currentMemoryLimit >= $maxSize || (float)$currentMemoryLimit <= 0) {
             return false;
         }
 
         for ($i=$minSize; $i<=$maxSize; $i*=2) {
-
-            if (@ini_set('memory_limit',"{$i}M") === false) {
+            if (@ini_set('memory_limit', "{$i}M") === false) {
                 if ($i == $minSize) {
                     return false;
                 } else {
@@ -310,6 +332,17 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         }
 
         return true;
+    }
+
+    // ---------------------------------------
+
+    public function getExecutionTime()
+    {
+        if (!$this->isPhpApiApacheHandler()) {
+            return null;
+        }
+
+        return @ini_get('max_execution_time');
     }
 
     // ---------------------------------------
@@ -324,6 +357,13 @@ class Ess_M2ePro_Helper_Client extends Mage_Core_Helper_Abstract
         } catch (Exception $exception) {
             $connRead->closeConnection();
         }
+    }
+
+    //########################################
+
+    public function getDisabledFunctions()
+    {
+        return array_filter(explode(',', ini_get('disable_functions')));
     }
 
     //########################################

@@ -2,10 +2,17 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
+use Ess_M2ePro_Model_Amazon_Account as AmazonAccount;
+use Ess_M2ePro_Model_Ebay_Account as EbayAccount;
+use Ess_M2ePro_Model_Walmart_Account as WalmartAccount;
+
+/**
+ * @method AmazonAccount|EbayAccount|WalmartAccount getChildObject()
+ */
 class Ess_M2ePro_Model_Account extends Ess_M2ePro_Model_Component_Parent_Abstract
 {
     //########################################
@@ -25,12 +32,12 @@ class Ess_M2ePro_Model_Account extends Ess_M2ePro_Model_Component_Parent_Abstrac
      */
     public function isLocked($onlyMainConditions = false)
     {
-        if (!$onlyMainConditions && parent::isLocked()) {
-            return true;
-        }
-
         if ($this->isComponentModeEbay() && $this->getChildObject()->isModeSandbox()) {
             return false;
+        }
+
+        if (!$onlyMainConditions && parent::isLocked()) {
+            return true;
         }
 
         return (bool)Mage::getModel('M2ePro/Listing')
@@ -78,7 +85,7 @@ class Ess_M2ePro_Model_Account extends Ess_M2ePro_Model_Component_Parent_Abstrac
      */
     public function getOtherListings($asObjects = false, array $filters = array())
     {
-        $otherListings = $this->getRelatedComponentItems('Listing_Other','account_id',$asObjects,$filters);
+        $otherListings = $this->getRelatedComponentItems('Listing_Other', 'account_id', $asObjects, $filters);
 
         if ($asObjects) {
             foreach ($otherListings as $otherListing) {
@@ -98,7 +105,7 @@ class Ess_M2ePro_Model_Account extends Ess_M2ePro_Model_Component_Parent_Abstrac
      */
     public function getOrders($asObjects = false, array $filters = array())
     {
-        $orders = $this->getRelatedComponentItems('Order','account_id',$asObjects,$filters);
+        $orders = $this->getRelatedComponentItems('Order', 'account_id', $asObjects, $filters);
 
         if ($asObjects) {
             foreach ($orders as $order) {
@@ -115,6 +122,11 @@ class Ess_M2ePro_Model_Account extends Ess_M2ePro_Model_Component_Parent_Abstrac
     public function getTitle()
     {
         return $this->getData('title');
+    }
+
+    public function getAdditionalData()
+    {
+        return $this->getData('additional_data');
     }
 
     /**

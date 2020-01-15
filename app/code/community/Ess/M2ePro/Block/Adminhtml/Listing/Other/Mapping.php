@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -26,7 +26,7 @@ class Ess_M2ePro_Block_Adminhtml_Listing_Other_Mapping extends Ess_M2ePro_Block_
             'class' => 'mapping_submit_button submit'
         );
         $buttonBlock = $this->getLayout()->createBlock('adminhtml/widget_button')->setData($data);
-        $this->setChild('mapping_submit_button',$buttonBlock);
+        $this->setChild('mapping_submit_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------

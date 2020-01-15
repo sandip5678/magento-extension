@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -17,10 +17,7 @@ class Ess_M2ePro_Block_Adminhtml_Listing_View_ModeSwitcher_Abstract extends Mage
     {
         parent::__construct();
 
-        // Initialization block
-        // ---------------------------------------
         $this->setId('listingViewModeSwitcher');
-        // ---------------------------------------
 
         $this->setData('component_nick', self::NICK);
         $this->setData('component_label', self::LABEL);
@@ -34,7 +31,7 @@ class Ess_M2ePro_Block_Adminhtml_Listing_View_ModeSwitcher_Abstract extends Mage
             'items' => $this->getMenuItems()
         );
 
-        $modeChangeBlock = $this->getLayout()->createBlock('M2ePro/adminhtml_listing_view_modeSwitcher');
+        $modeChangeBlock = $this->getLayout()->createBlock('M2ePro/adminhtml_widget_grid_modeSwitcher');
         $modeChangeBlock->setData($data);
         $modeChangeLabel = Mage::helper('M2ePro')->__('View Mode');
 
@@ -61,7 +58,7 @@ HTML;
         );
     }
 
-    private function getCurrentViewMode()
+    protected function getCurrentViewMode()
     {
         if (!isset($this->_data['current_view_mode'])) {
             throw new Ess_M2ePro_Model_Exception_Logic('View Mode is not set.');

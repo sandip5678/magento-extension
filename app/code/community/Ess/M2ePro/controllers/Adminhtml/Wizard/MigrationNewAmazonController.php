@@ -2,12 +2,12 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Adminhtml_Wizard_MigrationNewAmazonController
-    extends Ess_M2ePro_Controller_Adminhtml_Common_WizardController
+    extends Ess_M2ePro_Controller_Adminhtml_Amazon_WizardController
 {
     //########################################
 
@@ -15,8 +15,8 @@ class Ess_M2ePro_Adminhtml_Wizard_MigrationNewAmazonController
     {
         parent::_initAction();
         $this->getLayout()->getBlock('head')
-                          ->addJs('M2ePro/Wizard/Amazon/CustomHandler.js')
-                          ->addJs('M2ePro/Wizard/MigrationNewAmazonHandler.js');
+            ->addJs('M2ePro/Wizard/InstallationAmazon/CustomHandler.js')
+            ->addJs('M2ePro/Wizard/MigrationNewAmazonHandler.js');
 
         return $this;
     }
@@ -35,9 +35,6 @@ class Ess_M2ePro_Adminhtml_Wizard_MigrationNewAmazonController
         $this->getWizardHelper()->setStatus(
             'fullAmazonCategories', Ess_M2ePro_Helper_Module_Wizard::STATUS_SKIPPED
         );
-        $this->getWizardHelper()->setStatus(
-            'amazonShippingOverridePolicy', Ess_M2ePro_Helper_Module_Wizard::STATUS_SKIPPED
-        );
 
         parent::indexAction();
     }
@@ -55,18 +52,18 @@ class Ess_M2ePro_Adminhtml_Wizard_MigrationNewAmazonController
             return $this->_redirect('*/*/congratulation');
         }
 
-        if (!$this->getCurrentStep()) {
+        if (!$this->getCurrentStep() || !in_array($this->getCurrentStep(), $this->getSteps())) {
             $this->setStep($this->getFirstStep());
         }
 
         return $this->_initAction()
-                    ->_addContent($this->getWizardHelper()->createBlock('installation',$this->getNick()))
+                    ->_addContent($this->getWizardHelper()->createBlock('installation', $this->getNick()))
                     ->renderLayout();
     }
 
     public function congratulationAction()
     {
-        return $this->_redirect('*/adminhtml_common_listing/index/');
+        return $this->_redirect('*/adminhtml_amazon_listing/index/');
     }
 
     //########################################
@@ -79,16 +76,38 @@ class Ess_M2ePro_Adminhtml_Wizard_MigrationNewAmazonController
             return $this->getResponse()->setBody('error');
         }
 
-        /** @var $dispatcher Ess_M2ePro_Model_Synchronization_Dispatcher */
-        $dispatcher = Mage::getModel('M2ePro/Synchronization_Dispatcher');
+        /** @var Ess_M2ePro_Model_Marketplace $marketplace */
+        $marketplace = Mage::helper('M2ePro/Component')
+            ->getUnknownObject('Marketplace', $marketplaceId);
 
-        $dispatcher->setAllowedComponents(array(Ess_M2ePro_Helper_Component_Amazon::NICK));
-        $dispatcher->setAllowedTasksTypes(array(Ess_M2ePro_Model_Synchronization_Task::MARKETPLACES));
+        $lockItemManager = Mage::getModel(
+            'M2ePro/Lock_Item_Manager',
+            array(
+                'nick' => Ess_M2ePro_Helper_Component_Amazon::MARKETPLACE_SYNCHRONIZATION_LOCK_ITEM_NICK,
+            )
+        );
 
-        $dispatcher->setInitiator(Ess_M2ePro_Helper_Data::INITIATOR_USER);
-        $dispatcher->setParams(array('marketplace_id' => $marketplaceId));
+        if ($lockItemManager->isExist()) {
+            return $this->getResponse()->setBody('error');
+        }
 
-        $dispatcher->process();
+        $lockItemManager->create();
+
+        $progressManager = Mage::getModel(
+            'M2ePro/Lock_Item_Progress',
+            array(
+                'lock_item_manager' => $lockItemManager,
+                'progress_nick'     => $marketplace->getTitle() . ' Amazon Site',
+            )
+        );
+
+        $synchronization = Mage::getModel('M2ePro/Amazon_Marketplace_Synchronization');
+        $synchronization->setMarketplace($marketplace);
+        $synchronization->setProgressManager($progressManager);
+
+        $synchronization->process();
+
+        $lockItemManager->remove();
 
         return $this->getResponse()->setBody('success');
     }

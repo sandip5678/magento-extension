@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -51,18 +51,21 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
     const _ACTION_STOP_AND_REMOVE_PRODUCT = 'Stop on Channel / Remove from Listing';
     const ACTION_DELETE_AND_REMOVE_PRODUCT = 23;
     const _ACTION_DELETE_AND_REMOVE_PRODUCT = 'Remove from Channel & Listing';
-    const ACTION_NEW_SKU_PRODUCT_ON_COMPONENT = 27;
-    const _ACTION_NEW_SKU_PRODUCT_ON_COMPONENT = 'New SKU Item on Channel';
     const ACTION_SWITCH_TO_AFN_ON_COMPONENT = 29;
     const _ACTION_SWITCH_TO_AFN_ON_COMPONENT = 'Switching Fulfillment to AFN';
     const ACTION_SWITCH_TO_MFN_ON_COMPONENT = 30;
     const _ACTION_SWITCH_TO_MFN_ON_COMPONENT = 'Switching Fulfillment to MFN';
+    const ACTION_RESET_BLOCKED_PRODUCT = 32;
+    const _ACTION_RESET_BLOCKED_PRODUCT = 'Reset Inactive (Blocked) Item';
 
     const ACTION_CHANGE_PRODUCT_SPECIAL_PRICE_FROM_DATE = 19;
     const _ACTION_CHANGE_PRODUCT_SPECIAL_PRICE_FROM_DATE = 'Change of Product Special Price from date in Magento Store';
 
     const ACTION_CHANGE_PRODUCT_SPECIAL_PRICE_TO_DATE = 20;
     const _ACTION_CHANGE_PRODUCT_SPECIAL_PRICE_TO_DATE = 'Change of Product Special Price to date in Magento Store';
+
+    const ACTION_CHANGE_PRODUCT_TIER_PRICE = 31;
+    const _ACTION_CHANGE_PRODUCT_TIER_PRICE = 'Change of Product Tier Price in Magento Store';
 
     const ACTION_CHANGE_CUSTOM_ATTRIBUTE = 18;
     const _ACTION_CHANGE_CUSTOM_ATTRIBUTE = 'Change of Product Custom Attribute in Magento Store';
@@ -71,13 +74,13 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
     const _ACTION_MOVE_TO_LISTING = 'Move to another Listing';
 
     const ACTION_MOVE_FROM_OTHER_LISTING = 22;
-    const _ACTION_MOVE_FROM_OTHER_LISTING = 'Move from other Listing';
+    const _ACTION_MOVE_FROM_OTHER_LISTING = 'Move from 3rd Party Listing';
+
+    const ACTION_SELL_ON_ANOTHER_EBAY_SITE = 33;
+    const _ACTION_SELL_ON_ANOTHER_EBAY_SITE = 'Sell On Another eBay Site';
 
     const ACTION_CHANNEL_CHANGE = 25;
     const _ACTION_CHANNEL_CHANGE = 'Change Item on Channel';
-
-    const ACTION_TRANSLATE_PRODUCT = 28;
-    const _ACTION_TRANSLATE_PRODUCT = 'Translation';
 
     //########################################
 
@@ -89,103 +92,75 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
 
     //########################################
 
-    public function addListingMessage($listingId,
-                                      $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
-                                      $actionId = NULL,
-                                      $action = NULL,
-                                      $description = NULL,
-                                      $type = NULL,
-                                      $priority = NULL,
-                                      array $additionalData = array())
-    {
-        $dataForAdd = $this->makeDataForAdd($listingId,
-                                            $initiator,
-                                            NULL,
-                                            NULL,
-                                            $actionId,
-                                            $action,
-                                            $description,
-                                            $type,
-                                            $priority,
-                                            $additionalData);
+    public function addListingMessage(
+        $listingId,
+        $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
+        $actionId = null,
+        $action = null,
+        $description = null,
+        $type = null,
+        $priority = null,
+        array $additionalData = array()
+    ) {
+        $dataForAdd = $this->makeDataForAdd(
+            $listingId,
+            $initiator,
+            null,
+            null,
+            $actionId,
+            $action,
+            $description,
+            $type,
+            $priority,
+            $additionalData
+        );
 
         $this->createMessage($dataForAdd);
     }
 
-    public function addProductMessage($listingId,
-                                      $productId,
-                                      $listingProductId,
-                                      $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
-                                      $actionId = NULL,
-                                      $action = NULL,
-                                      $description = NULL,
-                                      $type = NULL,
-                                      $priority = NULL)
-    {
-        $dataForAdd = $this->makeDataForAdd($listingId,
-                                            $initiator,
-                                            $productId,
-                                            $listingProductId,
-                                            $actionId,
-                                            $action,
-                                            $description,
-                                            $type,
-                                            $priority);
+    public function addProductMessage(
+        $listingId,
+        $productId,
+        $listingProductId,
+        $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
+        $actionId = null,
+        $action = null,
+        $description = null,
+        $type = null,
+        $priority = null,
+        array $additionalData = array()
+    ) {
+        $dataForAdd = $this->makeDataForAdd(
+            $listingId,
+            $initiator,
+            $productId,
+            $listingProductId,
+            $actionId,
+            $action,
+            $description,
+            $type,
+            $priority,
+            $additionalData
+        );
 
         $this->createMessage($dataForAdd);
     }
 
     //########################################
 
-    public function updateListingTitle($listingId , $title)
+    public function clearMessages($listingId = null)
     {
-        if ($title == '') {
-             return false;
+        $filters = array();
+
+        if ($listingId !== null) {
+            $filters['listing_id'] = $listingId;
         }
 
-        Mage::getSingleton('core/resource')->getConnection('core_write')
-             ->update($this->getResource()->getMainTable(),
-                      array('listing_title'=>$title),array('listing_id = ?'=>(int)$listingId));
+        if ($this->_componentMode !== null) {
+            $filters['component_mode'] = $this->_componentMode;
+        }
 
-        return true;
-    }
-
-    public function updateProductTitle($productId , $title)
-    {
-         if ($title == '') {
-             return false;
-         }
-
-        Mage::getSingleton('core/resource')->getConnection('core_write')
-             ->update($this->getResource()->getMainTable(),
-                      array('product_title'=>$title),array('product_id = ?'=>(int)$productId));
-
-        return true;
-    }
-
-    // ---------------------------------------
-
-    public function getActionTitle($type)
-    {
-        return $this->getActionTitleByClass(__CLASS__,$type);
-    }
-
-    public function getActionsTitles()
-    {
-        return $this->getActionsTitlesByClass(__CLASS__,'ACTION_');
-    }
-
-    // ---------------------------------------
-
-    public function clearMessages($listingId = NULL)
-    {
-        $columnName = !is_null($listingId) ? 'listing_id' : NULL;
-        $this->clearMessagesByTable('M2ePro/Listing_Log',$columnName,$listingId);
-    }
-
-    public function getLastActionIdConfigKey()
-    {
-        return 'listings';
+        $this->getResource()->clearMessages($filters);
     }
 
     //########################################
@@ -193,10 +168,12 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
     protected function createMessage($dataForAdd)
     {
         $listing = Mage::helper('M2ePro/Component')->getCachedComponentObject(
-            $this->componentMode,'Listing',$dataForAdd['listing_id']
+            $this->_componentMode, 'Listing', $dataForAdd['listing_id']
         );
 
-        $dataForAdd['listing_title'] = $listing->getData('title');
+        $dataForAdd['listing_title']  = $listing->getData('title');
+        $dataForAdd['account_id']     = $listing->getData('account_id');
+        $dataForAdd['marketplace_id'] = $listing->getData('marketplace_id');
 
         if (isset($dataForAdd['product_id'])) {
             $dataForAdd['product_title'] = Mage::getModel('M2ePro/Magento_Product')
@@ -205,7 +182,7 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
             unset($dataForAdd['product_title']);
         }
 
-        $dataForAdd['component_mode'] = $this->componentMode;
+        $dataForAdd['component_mode'] = $this->_componentMode;
 
         Mage::getModel('M2ePro/Listing_Log')
                  ->setData($dataForAdd)
@@ -213,65 +190,66 @@ class Ess_M2ePro_Model_Listing_Log extends Ess_M2ePro_Model_Log_Abstract
                  ->getId();
     }
 
-    protected function makeDataForAdd($listingId,
-                                      $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
-                                      $productId = NULL,
-                                      $listingProductId = NULL,
-                                      $actionId = NULL,
-                                      $action = NULL,
-                                      $description = NULL,
-                                      $type = NULL,
-                                      $priority = NULL,
-                                      array $additionalData = array())
-    {
+    protected function makeDataForAdd(
+        $listingId,
+        $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
+        $productId = null,
+        $listingProductId = null,
+        $actionId = null,
+        $action = null,
+        $description = null,
+        $type = null,
+        $priority = null,
+        array $additionalData = array()
+    ) {
         $dataForAdd = array();
 
         $dataForAdd['listing_id'] = (int)$listingId;
         $dataForAdd['initiator'] = $initiator;
 
-        if (!is_null($productId)) {
+        if ($productId !== null) {
             $dataForAdd['product_id'] = (int)$productId;
         } else {
-            $dataForAdd['product_id'] = NULL;
+            $dataForAdd['product_id'] = null;
         }
 
-        if (!is_null($listingProductId)) {
+        if ($listingProductId !== null) {
             $dataForAdd['listing_product_id'] = (int)$listingProductId;
         } else {
-            $dataForAdd['listing_product_id'] = NULL;
+            $dataForAdd['listing_product_id'] = null;
         }
 
-        if (!is_null($actionId)) {
+        if ($actionId !== null) {
             $dataForAdd['action_id'] = (int)$actionId;
         } else {
-            $dataForAdd['action_id'] = NULL;
+            $dataForAdd['action_id'] = null;
         }
 
-        if (!is_null($action)) {
+        if ($action !== null) {
             $dataForAdd['action'] = (int)$action;
         } else {
             $dataForAdd['action'] = self::ACTION_UNKNOWN;
         }
 
-        if (!is_null($description)) {
+        if ($description !== null) {
             $dataForAdd['description'] = $description;
         } else {
-            $dataForAdd['description'] = NULL;
+            $dataForAdd['description'] = null;
         }
 
-        if (!is_null($type)) {
+        if ($type !== null) {
             $dataForAdd['type'] = (int)$type;
         } else {
             $dataForAdd['type'] = self::TYPE_NOTICE;
         }
 
-        if (!is_null($priority)) {
+        if ($priority !== null) {
             $dataForAdd['priority'] = (int)$priority;
         } else {
             $dataForAdd['priority'] = self::PRIORITY_LOW;
         }
 
-        $dataForAdd['additional_data'] = json_encode($additionalData);
+        $dataForAdd['additional_data'] = Mage::helper('M2ePro')->jsonEncode($additionalData);
 
         return $dataForAdd;
     }

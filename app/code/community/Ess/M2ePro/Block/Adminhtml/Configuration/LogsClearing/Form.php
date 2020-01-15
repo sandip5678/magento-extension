@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -15,28 +15,23 @@ class Ess_M2ePro_Block_Adminhtml_Configuration_LogsClearing_Form
     {
         parent::__construct();
 
-        // Initialization block
-        // ---------------------------------------
         $this->setId('configurationLogsClearingForm');
-        // ---------------------------------------
-
         $this->setTemplate('M2ePro/configuration/logsClearing.phtml');
-
-        // ---------------------------------------
-
-        $this->setPageHelpLink('Global+Settings#GlobalSettings-LogsClearing');
+        $this->setPageHelpLink("x/CwAJAQ");
     }
 
     //########################################
 
     protected function _prepareForm()
     {
-        $form = new Varien_Data_Form(array(
+        $form = new Varien_Data_Form(
+            array(
             'id'      => 'config_edit_form',
             'action'  => $this->getUrl('M2ePro/adminhtml_configuration_logsClearing/save'),
             'method'  => 'post',
             'enctype' => 'multipart/form-data'
-        ));
+            )
+        );
 
         $form->setUseContainer(true);
         $this->setForm($form);
@@ -56,18 +51,24 @@ class Ess_M2ePro_Block_Adminhtml_Configuration_LogsClearing_Form
         $config = Mage::helper('M2ePro/Module')->getConfig();
         $tasks = array(
             Ess_M2ePro_Model_Log_Clearing::LOG_LISTINGS,
-            Ess_M2ePro_Model_Log_Clearing::LOG_OTHER_LISTINGS,
             Ess_M2ePro_Model_Log_Clearing::LOG_SYNCHRONIZATIONS,
-            Ess_M2ePro_Model_Log_Clearing::LOG_ORDERS
+            Ess_M2ePro_Model_Log_Clearing::LOG_ORDERS,
+            Ess_M2ePro_Model_Log_Clearing::LOG_EBAY_PICKUP_STORE,
         );
+
+        $this->isPickupStoreFeatureEnabled = false;
+        if (Mage::helper('M2ePro/Component_Ebay_PickupStore')->isFeatureEnabled()) {
+            $this->isPickupStoreFeatureEnabled = true;
+            $tasks[] = Ess_M2ePro_Model_Log_Clearing::LOG_EBAY_PICKUP_STORE;
+        }
 
         // ---------------------------------------
         $modes = array();
         $days  = array();
 
         foreach ($tasks as $task) {
-            $modes[$task] = $config->getGroupValue('/logs/clearing/'.$task.'/','mode');
-            $days[$task] = $config->getGroupValue('/logs/clearing/'.$task.'/','days');
+            $modes[$task] = $config->getGroupValue('/logs/clearing/'.$task.'/', 'mode');
+            $days[$task] = $config->getGroupValue('/logs/clearing/'.$task.'/', 'days');
         }
 
         $this->modes = $modes;

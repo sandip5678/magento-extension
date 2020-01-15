@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -25,7 +25,6 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
         $recentCategories = $allRecentCategories[$marketplaceId];
 
         foreach ($recentCategories as $index => $recentCategoryValue) {
-
             $isRecentCategoryExists = isset($recentCategoryValue['browsenode_id'], $recentCategoryValue['path']);
 
             $isCategoryEqualExcludedCategory = !empty($excludedCategory) &&
@@ -55,7 +54,6 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
 
         $recentCategories = $allRecentCategories[$marketplaceId];
         foreach ($recentCategories as $recentCategoryValue) {
-
             if (!isset($recentCategoryValue['browsenode_id'], $recentCategoryValue['path'])) {
                 continue;
             }
@@ -78,20 +76,22 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
         $recentCategories[] = $categoryInfo;
         $allRecentCategories[$marketplaceId] = $recentCategories;
 
-        $registryModel->addData(array(
+        $registryModel->addData(
+            array(
             'key'   => $key,
-            'value' => json_encode($allRecentCategories)
-        ))->save();
+            'value' => Mage::helper('M2ePro')->jsonEncode($allRecentCategories)
+            )
+        )->save();
     }
 
     //########################################
 
-    private function getConfigGroup()
+    protected function getConfigGroup()
     {
         return "/amazon/category/recent/";
     }
 
-    private function removeNotAccessibleCategories($marketplaceId, array &$recentCategories)
+    protected function removeNotAccessibleCategories($marketplaceId, array &$recentCategories)
     {
         if (empty($recentCategories)) {
             return;
@@ -104,7 +104,10 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
 
         $select = Mage::getSingleton('core/resource')->getConnection('core_read')
             ->select()
-            ->from(Mage::getSingleton('core/resource')->getTableName('m2epro_amazon_dictionary_category'))
+            ->from(
+                Mage::helper('M2ePro/Module_Database_Structure')
+                    ->getTableNameWithPrefix('m2epro_amazon_dictionary_category')
+            )
             ->where('marketplace_id = ?', $marketplaceId)
             ->where('browsenode_id IN (?)', array_unique($nodeIdsForCheck));
 
@@ -118,7 +121,6 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
         }
 
         foreach ($recentCategories as $categoryKey => &$categoryData) {
-
             $categoryPath = str_replace(' > ', '>', $categoryData['path']);
             $key = $categoryData['browsenode_id'] .'##'. $categoryPath;
 
@@ -129,7 +131,7 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
         }
     }
 
-    private function removeRecentCategory(array $category, $marketplaceId)
+    protected function removeRecentCategory(array $category, $marketplaceId)
     {
         /** @var $registryModel Ess_M2ePro_Model_Registry */
         $registryModel = Mage::getModel('M2ePro/Registry')->load($this->getConfigGroup(), 'key');
@@ -139,16 +141,17 @@ class Ess_M2ePro_Helper_Component_Amazon_Category extends Mage_Core_Helper_Abstr
         foreach ($currentRecentCategories as $index => $recentCategory) {
             if ($category['browsenode_id'] == $recentCategory['browsenode_id'] &&
                 $category['path']          == $recentCategory['path']) {
-
                 unset($allRecentCategories[$marketplaceId][$index]);
                 break;
             }
         }
 
-        $registryModel->addData(array(
+        $registryModel->addData(
+            array(
             'key' => $this->getConfigGroup(),
-            'value' => json_encode($allRecentCategories)
-        ))->save();
+            'value' => Mage::helper('M2ePro')->jsonEncode($allRecentCategories)
+            )
+        )->save();
     }
 
     //########################################

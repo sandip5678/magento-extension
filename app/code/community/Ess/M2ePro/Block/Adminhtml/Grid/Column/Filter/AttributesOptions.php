@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -44,7 +44,7 @@ class Ess_M2ePro_Block_Adminhtml_Grid_Column_Filter_AttributesOptions
 
     protected function _renderOption($option, $value)
     {
-        $selected = (($option['label'] == $value && (!is_null($value))) ? ' selected="selected"' : '' );
+        $selected = (($option['label'] == $value && ($value !== null)) ? ' selected="selected"' : '' );
         return '<option value="'. $this->escapeHtml($option['label']).'"'.$selected.'>' .
             $this->escapeHtml($option['label']).'</option>';
     }
@@ -79,8 +79,12 @@ class Ess_M2ePro_Block_Adminhtml_Grid_Column_Filter_AttributesOptions
         $values = $this->getValue();
         $conditions = array();
         foreach ($values as $value) {
-            $conditions[] = array('regexp'=> '"variation_product_options":[^}]*'.$value['attr'].'":"'.$value['value']);
+            $conditions[] = array(
+                'regexp' => '"variation_product_options":[^}]*' .
+                            $value['attr'] . '[[:space:]]*":"[[:space:]]*' . $value['value'] . '[[:space:]]*'
+            );
         }
+
         return $conditions;
     }
 

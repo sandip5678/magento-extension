@@ -1,4 +1,4 @@
-MigrationNewAmazonHandler = Class.create(WizardAmazonCustomHandler, {
+MigrationNewAmazonHandler = Class.create(WizardInstallationAmazonCustomHandler, {
 
     // ---------------------------------------
 
@@ -46,7 +46,7 @@ MigrationNewAmazonHandler = Class.create(WizardAmazonCustomHandler, {
                     );
                 }
 
-                return flase;
+                return false;
             }).bind(this)
         })
     }

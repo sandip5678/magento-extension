@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -34,11 +34,13 @@ class Ess_M2ePro_Block_Adminhtml_Wizard_MigrationNewAmazon_Installation_Informat
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                     'label'   => Mage::helper('M2ePro')->__('Confirm'),
                     'onclick' => 'WizardHandlerObj.skipStep(\'information\', '.$callback.');',
                     'class' => 'process_information_button'
-                ));
+                )
+            );
         $this->setChild('process_information_button', $buttonBlock);
         // ---------------------------------------
 

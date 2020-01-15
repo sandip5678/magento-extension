@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -18,7 +18,7 @@ class Ess_M2ePro_Block_Adminhtml_Wizard_MigrationNewAmazon_Installation
         $this->setChild(
             'step_marketplaces_synchronization',
             $this->helper('M2ePro/Module_Wizard')->createBlock(
-                'installation_marketplacesSynchronization',$this->getNick()
+                'installation_marketplacesSynchronization', $this->getNick()
             )
         );
 
@@ -28,7 +28,7 @@ class Ess_M2ePro_Block_Adminhtml_Wizard_MigrationNewAmazon_Installation
             $this->setChild(
                 'step_description_templates',
                 $this->helper('M2ePro/Module_Wizard')->createBlock(
-                    'installation_descriptionTemplates',$this->getNick()
+                    'installation_descriptionTemplates', $this->getNick()
                 )
             );
         }
@@ -36,7 +36,7 @@ class Ess_M2ePro_Block_Adminhtml_Wizard_MigrationNewAmazon_Installation
         $this->setChild(
             'step_information',
             $this->helper('M2ePro/Module_Wizard')->createBlock(
-                'installation_information',$this->getNick()
+                'installation_information', $this->getNick()
             )
         );
         // ---------------------------------------
@@ -53,9 +53,11 @@ class Ess_M2ePro_Block_Adminhtml_Wizard_MigrationNewAmazon_Installation
 
     protected function _toHtml()
     {
-        $urls = json_encode(array(
+        $urls = Mage::helper('M2ePro')->jsonEncode(
+            array(
             'marketplacesSynchronization' => $this->getUrl('*/*/marketplacesSynchronization')
-        ));
+            )
+        );
 
         $js = <<<JS
         <script>

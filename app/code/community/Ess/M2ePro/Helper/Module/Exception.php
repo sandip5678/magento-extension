@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -17,12 +17,12 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
     public function process(Exception $exception, $sendToServer = true)
     {
         try {
-
             $type = get_class($exception);
 
             $info = $this->getExceptionInfo($exception, $type);
             $info .= $this->getExceptionStackTraceInfo($exception);
             $info .= $this->getCurrentUserActionInfo();
+            $info .= $this->getAdditionalActionInfo();
             $info .= Mage::helper('M2ePro/Module_Support_Form')->getSummaryInfo();
 
             $this->log($info, $type);
@@ -30,7 +30,7 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
             if (!$sendToServer ||
                 ($exception instanceof Ess_M2ePro_Model_Exception && !$exception->isSendToServer()) ||
                 !(bool)(int)Mage::helper('M2ePro/Module')->getConfig()
-                                ->getGroupValue('/debug/exceptions/','send_to_server') ||
+                                ->getGroupValue('/debug/exceptions/', 'send_to_server') ||
                 $this->isExceptionFiltered($info, $exception->getMessage(), $type)) {
                 return;
             }
@@ -39,30 +39,31 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
             if (!empty($temp)) {
                 return;
             }
+
             Mage::helper('M2ePro/Data_Global')->setValue('send_exception_to_server', true);
 
             $this->send($info, $exception->getMessage(), $type);
 
             Mage::helper('M2ePro/Data_Global')->unsetValue('send_exception_to_server');
-
-        } catch (Exception $exceptionTemp) {}
+        } catch (Exception $exceptionTemp) {
+        }
     }
 
     public function processFatal($error, $traceInfo)
     {
         try {
-
             $type = 'Fatal Error';
 
             $info = $this->getFatalInfo($error, $type);
             $info .= $traceInfo;
             $info .= $this->getCurrentUserActionInfo();
+            $info .= $this->getAdditionalActionInfo();
             $info .= Mage::helper('M2ePro/Module_Support_Form')->getSummaryInfo();
 
             $this->log($info, $type);
 
             if (!(bool)(int)Mage::helper('M2ePro/Module')->getConfig()
-                                ->getGroupValue('/debug/fatal_error/','send_to_server') ||
+                                ->getGroupValue('/debug/fatal_error/', 'send_to_server') ||
                 $this->isExceptionFiltered($info, $error['message'], $type)) {
                 return;
             }
@@ -71,13 +72,14 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
             if (!empty($temp)) {
                 return;
             }
+
             Mage::helper('M2ePro/Data_Global')->setValue('send_exception_to_server', true);
 
             $this->send($info, $error['message'], $type);
 
             Mage::helper('M2ePro/Data_Global')->unsetValue('send_exception_to_server');
-
-        } catch (Exception $exceptionTemp) {}
+        } catch (Exception $exceptionTemp) {
+        }
     }
 
     // ---------------------------------------
@@ -92,22 +94,24 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
 
         Mage::helper('M2ePro/Data_Global')->setValue('set_fatal_error_handler', true);
 
-        $functionCode = '$error = error_get_last();
+        register_shutdown_function(
+            function(){
 
-                         if (is_null($error)) {
-                             return;
-                         }
+            $error = error_get_last();
+            if ($error === null) {
+                return;
+            }
 
-                         $fatalErrors = array(E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR);
+            if (!in_array((int)$error['type'], array(E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR))) {
+                return;
+            }
 
-                         if (in_array((int)$error[\'type\'], $fatalErrors)) {
-                             $trace = @debug_backtrace(false);
-                             $traceInfo = Mage::helper(\'M2ePro/Module_Exception\')->getFatalStackTraceInfo($trace);
-                             Mage::helper(\'M2ePro/Module_Exception\')->processFatal($error,$traceInfo);
-                         }';
+            $trace = @debug_backtrace(false);
+            $traceInfo = Mage::helper('M2ePro/Module_Exception')->getFatalStackTraceInfo($trace);
 
-        $shutdownFunction = create_function('', $functionCode);
-        register_shutdown_function($shutdownFunction);
+            Mage::helper('M2ePro/Module_Exception')->processFatal($error, $traceInfo);
+            }
+        );
     }
 
     public function getUserMessage(Exception $exception)
@@ -117,7 +121,7 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
 
     //########################################
 
-    private function log($message, $type)
+    protected function log($message, $type)
     {
         /** @var Ess_M2ePro_Model_Log_System $log */
         $log = Mage::getModel('M2ePro/Log_System');
@@ -125,12 +129,21 @@ class Ess_M2ePro_Helper_Module_Exception extends Mage_Core_Helper_Abstract
         $log->setType($type);
         $log->setDescription($message);
 
+        $trace = debug_backtrace();
+        $file = isset($trace[1]['file']) ? $trace[1]['file'] : 'not set';;
+        $line = isset($trace[1]['line']) ? $trace[1]['line'] : 'not set';
+
+        $additionalData = array(
+            'called-from' => $file .' : '. $line
+        );
+        $log->setData('additional_data', print_r($additionalData, true));
+
         $log->save();
     }
 
     //########################################
 
-    private function getExceptionInfo(Exception $exception, $type)
+    protected function getExceptionInfo(Exception $exception, $type)
     {
         $additionalData = $exception instanceof Ess_M2ePro_Model_Exception ? $exception->getAdditionalData()
                                                                            : '';
@@ -151,7 +164,7 @@ EXCEPTION;
         return $exceptionInfo;
     }
 
-    private function getExceptionStackTraceInfo(Exception $exception)
+    protected function getExceptionStackTraceInfo(Exception $exception)
     {
         $stackTraceInfo = <<<TRACE
 -------------------------------- STACK TRACE INFO --------------------------------
@@ -165,7 +178,7 @@ TRACE;
 
     // ---------------------------------------
 
-    private function getFatalInfo($error, $type)
+    protected function getFatalInfo($error, $type)
     {
         $fatalInfo = <<<FATAL
 -------------------------------- FATAL ERROR INFO --------------------------------
@@ -205,6 +218,7 @@ FATAL;
                         }
                     }
                 }
+
                 $info .= ")\n";
             }
         }
@@ -225,11 +239,11 @@ TRACE;
 
     // ---------------------------------------
 
-    private function getCurrentUserActionInfo()
+    protected function getCurrentUserActionInfo()
     {
-        $server = isset($_SERVER) ? print_r($_SERVER, true) : '';
-        $get = isset($_GET) ? print_r($_GET, true) : '';
-        $post = isset($_POST) ? print_r($_POST, true) : '';
+        $server = print_r(Mage::app()->getRequest()->getServer(), true);
+        $get = print_r(Mage::app()->getRequest()->getQuery(), true);
+        $post = print_r(Mage::app()->getRequest()->getPost(), true);
 
         $actionInfo = <<<ACTION
 -------------------------------- ACTION INFO -------------------------------------
@@ -242,23 +256,38 @@ ACTION;
         return $actionInfo;
     }
 
+    protected function getAdditionalActionInfo()
+    {
+        $currentStoreId = Mage::app()->getStore()->getId();
+
+        $actionInfo = <<<ACTION
+-------------------------------- ADDITIONAL INFO -------------------------------------
+Current Store: {$currentStoreId}
+
+ACTION;
+
+        return $actionInfo;
+    }
+
     //########################################
 
-    private function send($info, $message, $type)
+    protected function send($info, $message, $type)
     {
-        $dispatcherObject = Mage::getModel('M2ePro/Connector_M2ePro_Dispatcher');
-        $connectorObj = $dispatcherObject->getVirtualConnector('exception','add','entity',
-                                                               array('info'    => $info,
+        $dispatcherObject = Mage::getModel('M2ePro/M2ePro_Connector_Dispatcher');
+        $connectorObj = $dispatcherObject->getVirtualConnector(
+            'exception', 'add', 'entity',
+            array('info'    => $info,
                                                                      'message' => $message,
-                                                                     'type'    => $type));
+            'type'    => $type)
+        );
 
         $dispatcherObject->process($connectorObj);
     }
 
-    private function isExceptionFiltered($info, $message, $type)
+    protected function isExceptionFiltered($info, $message, $type)
     {
         if (!(bool)(int)Mage::helper('M2ePro/Module')->getConfig()
-                            ->getGroupValue('/debug/exceptions/','filters_mode')) {
+                            ->getGroupValue('/debug/exceptions/', 'filters_mode')) {
             return false;
         }
 
@@ -266,16 +295,13 @@ ACTION;
                                                              ->getValueFromJson();
 
         foreach ($exceptionFilters as $exceptionFilter) {
-
             try {
-
                 $searchSubject = '';
                 $exceptionFilter['type'] == self::FILTER_TYPE_TYPE    && $searchSubject = $type;
                 $exceptionFilter['type'] == self::FILTER_TYPE_MESSAGE && $searchSubject = $message;
                 $exceptionFilter['type'] == self::FILTER_TYPE_INFO    && $searchSubject = $info;
 
                 $tempResult = preg_match($exceptionFilter['preg_match'], $searchSubject);
-
             } catch (Exception $exception) {
                 return false;
             }

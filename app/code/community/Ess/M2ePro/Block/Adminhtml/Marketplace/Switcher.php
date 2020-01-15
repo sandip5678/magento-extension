@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Marketplace_Switcher extends Ess_M2ePro_Block_Adminhtml_Component_Switcher
 {
-    protected $paramName = 'marketplace';
+    protected $_paramName = 'marketplace';
 
     //########################################
 
@@ -21,19 +21,25 @@ class Ess_M2ePro_Block_Adminhtml_Marketplace_Switcher extends Ess_M2ePro_Block_A
         return Mage::helper('M2ePro')->__($this->getComponentLabel('%component% Marketplace'));
     }
 
-    public function getItems()
+    protected function loadItems()
     {
         $collection = Mage::getModel('M2ePro/Marketplace')->getCollection()
             ->addFieldToFilter('status', Ess_M2ePro_Model_Marketplace::STATUS_ENABLE)
             ->setOrder('component_mode', 'ASC')
             ->setOrder('sorder', 'ASC');
 
-        if (!is_null($this->componentMode)) {
+        if ($this->componentMode !== null) {
             $collection->addFieldToFilter('component_mode', $this->componentMode);
         }
 
+        if (!$collection->getSize()) {
+            $this->_items = array();
+            return;
+        }
+
         if ($collection->getSize() < 2) {
-            return array();
+            $this->_hasDefaultOption = false;
+            $this->setIsDisabled(true);
         }
 
         $componentTitles = Mage::helper('M2ePro/Component')->getComponentsTitles();
@@ -48,6 +54,7 @@ class Ess_M2ePro_Block_Adminhtml_Marketplace_Switcher extends Ess_M2ePro_Block_A
                 if (isset($componentTitles[$marketplace->getComponentMode()])) {
                     $label = $componentTitles[$marketplace->getComponentMode()];
                 }
+
                 $items[$marketplace->getComponentMode()]['label'] = $label;
             }
 
@@ -57,7 +64,7 @@ class Ess_M2ePro_Block_Adminhtml_Marketplace_Switcher extends Ess_M2ePro_Block_A
             );
         }
 
-        return $items;
+        $this->_items = $items;
     }
 
     //########################################

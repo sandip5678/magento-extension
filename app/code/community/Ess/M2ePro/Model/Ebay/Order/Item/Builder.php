@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -27,16 +27,17 @@ class Ess_M2ePro_Model_Ebay_Order_Item_Builder extends Mage_Core_Model_Abstract
         // ---------------------------------------
         $this->setData('price', (float)$data['selling']['price']);
         $this->setData('qty_purchased', (int)$data['selling']['qty_purchased']);
-        $this->setData('tax_details', json_encode($data['selling']['tax_details']));
+        $this->setData('tax_details', Mage::helper('M2ePro')->jsonEncode($data['selling']['tax_details']));
         $this->setData('final_fee', (float)$data['selling']['final_fee']);
+        $this->setData('waste_recycling_fee', (float)$data['selling']['waste_recycling_fee']);
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->setData('variation_details', json_encode($data['variation_details']));
+        $this->setData('variation_details', Mage::helper('M2ePro')->jsonEncode($data['variation_details']));
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->setData('tracking_details', json_encode($data['tracking_details']));
+        $this->setData('tracking_details', Mage::helper('M2ePro')->jsonEncode($data['tracking_details']));
         // ---------------------------------------
     }
 
@@ -52,7 +53,7 @@ class Ess_M2ePro_Model_Ebay_Order_Item_Builder extends Mage_Core_Model_Abstract
     /**
      * @return Ess_M2ePro_Model_Order_Item
      */
-    private function createOrderItem()
+    protected function createOrderItem()
     {
         $item = Mage::helper('M2ePro/Component_Ebay')->getCollection('Order_Item')
             ->addFieldToFilter('order_id', $this->getData('order_id'))

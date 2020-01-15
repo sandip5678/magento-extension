@@ -2,22 +2,20 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Adminhtml_Listing_Grid
 {
+    const MASS_ACTION_ID_EDIT_PARTS_COMPATIBILITY = 'editPartsCompatibilityMode';
+
     //########################################
 
     public function __construct()
     {
         parent::__construct();
-
-        // Initialization block
-        // ---------------------------------------
         $this->setId('ebayListingGrid');
-        // ---------------------------------------
     }
 
     protected function _prepareCollection()
@@ -28,12 +26,16 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
 
         // Get collection of listings
         $collection = Mage::helper('M2ePro/Component_Ebay')->getCollection('Listing');
-        $collection->getSelect()->join(array('a'=>Mage::getResourceModel('M2ePro/Account')->getMainTable()),
-                                       '(`a`.`id` = `main_table`.`account_id`)',
-                                       array('account_title'=>'title'));
-        $collection->getSelect()->join(array('m'=>Mage::getResourceModel('M2ePro/Marketplace')->getMainTable()),
-                                       '(`m`.`id` = `main_table`.`marketplace_id`)',
-                                       array('marketplace_title'=>'title'));
+        $collection->getSelect()->join(
+            array('a'=>Mage::getResourceModel('M2ePro/Account')->getMainTable()),
+            '(`a`.`id` = `main_table`.`account_id`)',
+            array('account_title'=>'title')
+        );
+        $collection->getSelect()->join(
+            array('m'=>Mage::getResourceModel('M2ePro/Marketplace')->getMainTable()),
+            '(`m`.`id` = `main_table`.`marketplace_id`)',
+            array('marketplace_title'=>'title')
+        );
 
         $this->setCollection($collection);
 
@@ -52,24 +54,32 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
 
         // Set clear log action
         // ---------------------------------------
-        $this->getMassactionBlock()->addItem('clear_logs', array(
+        $this->getMassactionBlock()->addItem(
+            'clear_logs', array(
              'label'    => Mage::helper('M2ePro')->__('Clear Log(s)'),
-             'url'      => $this->getUrl('*/adminhtml_listing/clearLog',array(
-                 'back' => Mage::helper('M2ePro')->makeBackUrlParam('*/adminhtml_ebay_listing/index',array(
+            'url'      => $this->getUrl(
+                '*/adminhtml_listing/clearLog', array(
+                'back' => Mage::helper('M2ePro')->makeBackUrlParam(
+                    '*/adminhtml_ebay_listing/index', array(
                      'tab' => Ess_M2ePro_Block_Adminhtml_Ebay_ManageListings::TAB_ID_LISTING
-                 ))
-             )),
+                    )
+                )
+                )
+            ),
              'confirm'  => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
         // ---------------------------------------
 
         // Set remove listings action
         // ---------------------------------------
-        $this->getMassactionBlock()->addItem('delete_listings', array(
+        $this->getMassactionBlock()->addItem(
+            'delete_listings', array(
              'label'    => Mage::helper('M2ePro')->__('Delete Listing(s)'),
              'url'      => $this->getUrl('*/adminhtml_ebay_listing/delete'),
              'confirm'  => Mage::helper('M2ePro')->__('Are you sure?')
-        ));
+            )
+        );
         // ---------------------------------------
 
         return parent::_prepareMassaction();
@@ -79,7 +89,8 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
 
     protected function setColumns()
     {
-        $this->addColumn('items_sold_count', array(
+        $this->addColumn(
+            'items_sold_count', array(
             'header'    => Mage::helper('M2ePro')->__('Sold QTY'),
             'align'     => 'right',
             'width'     => '100px',
@@ -87,7 +98,8 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
             'index'     => 'items_sold_count',
             'filter_index' => 'second_table.items_sold_count',
             'frame_callback' => array($this, 'callbackColumnSoldQTY')
-        ));
+            )
+        );
 
         return $this;
     }
@@ -95,9 +107,11 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
     protected function getColumnActionsItems()
     {
         $helper  = Mage::helper('M2ePro');
-        $backUrl = $helper->makeBackUrlParam('*/adminhtml_ebay_listing/index',array(
+        $backUrl = $helper->makeBackUrlParam(
+            '*/adminhtml_ebay_listing/index', array(
             'tab' => Ess_M2ePro_Block_Adminhtml_Ebay_ManageListings::TAB_ID_LISTING
-        ));
+            )
+        );
 
         $actions = array(
             'manageProducts' => array(
@@ -135,7 +149,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
             ),
 
             'viewLogs' => array(
-                'caption' => $helper->__('View Logs'),
+                'caption' => $helper->__('Logs & Events'),
                 'group'   => 'other',
                 'field'   => 'id',
                 'url'     => array(
@@ -215,26 +229,47 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Grid extends Ess_M2ePro_Block_Admi
                         'back' => $backUrl
                     )
                 )
-            )
+            ),
+
+            'editPartsCompatibilityMode' => array(
+                'caption'        => $helper->__('Parts Compatibility Mode'),
+                'group'          => 'edit_actions',
+                'field'          => 'id',
+                'onclick_action' => 'EditCompatibilityModeObj.openPopup',
+                'action_id'      => self::MASS_ACTION_ID_EDIT_PARTS_COMPATIBILITY
+            ),
         );
 
-        if (Mage::helper('M2ePro/View_Ebay')->isSimpleMode()) {
-            unset($actions['autoActions']);
-            unset($actions['editSynchronization']);
-        }
-
         return $actions;
+    }
+
+    /**
+     * editPartsCompatibilityMode has to be not accessible for not Multi Motors marketplaces
+     * @return $this
+     */
+    protected function _prepareColumns()
+    {
+        $result = parent::_prepareColumns();
+
+        $this->getColumn('actions')->setData(
+            'renderer', 'M2ePro/adminhtml_ebay_listing_grid_column_renderer_action'
+        );
+
+        return $result;
     }
 
     //########################################
 
     public function callbackColumnTitle($value, $row, $column, $isExport)
     {
-        $value = '<span id="listing_title_'.$row->getId().'">' .
-                    Mage::helper('M2ePro')->escapeHtml($value) .
-                 '</span>';
+        $title = Mage::helper('M2ePro')->escapeHtml($value);
+        $compatibilityMode = $row->getData('parts_compatibility_mode');
 
-        /* @var $row Ess_M2ePro_Model_Listing */
+        $value = <<<HTML
+<span id="listing_title_{$row->getId()}">{$title}</span>
+<span id="listing_compatibility_mode_{$row->getId()}" style="display: none;">{$compatibilityMode}</span>
+HTML;
+        /** @var $row Ess_M2ePro_Model_Listing */
         $accountTitle = $row->getData('account_title');
         $marketplaceTitle = $row->getData('marketplace_title');
 
@@ -276,9 +311,11 @@ HTML;
 
     public function getRowUrl($row)
     {
-        return $this->getUrl('*/adminhtml_ebay_listing/view', array(
+        return $this->getUrl(
+            '*/adminhtml_ebay_listing/view', array(
             'id' => $row->getId()
-        ));
+            )
+        );
     }
 
     //########################################
@@ -305,25 +342,31 @@ HTML;
             return parent::_toHtml();
         }
 
-        $urls = json_encode(array_merge(
-            Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_listing'),
-            Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_listing_productAdd'),
-            Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_log'),
-            Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_template'),
-            array(
-                'adminhtml_common_listing/saveTitle' => Mage::helper('adminhtml')
-                    ->getUrl('M2ePro/adminhtml_common_listing/saveTitle')
+        $urls = Mage::helper('M2ePro')->jsonEncode(
+            array_merge(
+                Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_listing'),
+                Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_listing_productAdd'),
+                Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_log'),
+                Mage::helper('M2ePro')->getControllerActions('adminhtml_ebay_template'),
+                array(
+                'adminhtml_listing/saveTitle' => Mage::helper('adminhtml')->getUrl('M2ePro/adminhtml_listing/saveTitle')
+                )
             )
-        ));
+        );
 
-        $translations = json_encode(array(
+        $translations = Mage::helper('M2ePro')->jsonEncode(
+            array(
             'Cancel' => Mage::helper('M2ePro')->__('Cancel'),
             'Save' => Mage::helper('M2ePro')->__('Save'),
+            'Edit Parts Compatibility Mode' => Mage::helper('M2ePro')->__('Edit Parts Compatibility Mode'),
             'Edit Listing Title' => Mage::helper('M2ePro')->__('Edit Listing Title'),
-        ));
+            )
+        );
 
-        $uniqueTitleTxt = Mage::helper('M2ePro')->escapeJs(Mage::helper('M2ePro')
-            ->__('The specified Title is already used for other Listing. Listing Title must be unique.'));
+        $uniqueTitleTxt = Mage::helper('M2ePro')->escapeJs(
+            Mage::helper('M2ePro')
+            ->__('The specified Title is already used for other Listing. Listing Title must be unique.')
+        );
 
         $constants = Mage::helper('M2ePro')
             ->getClassConstantAsJson('Ess_M2ePro_Helper_Component_Ebay');
@@ -345,6 +388,7 @@ HTML;
 
         EbayListingGridHandlerObj = new EbayListingGridHandler('{$this->getId()}');
         EditListingTitleObj = new ListingEditListingTitle('{$this->getId()}');
+        EditCompatibilityModeObj = new EditCompatibilityMode('{$this->getId()}');
     });
 
 </script>

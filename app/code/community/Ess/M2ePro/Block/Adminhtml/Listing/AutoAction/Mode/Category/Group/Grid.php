@@ -2,14 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
     extends Mage_Adminhtml_Block_Widget_Grid
 {
-    private $isGridPrepared = false;
+    protected $_isGridPrepared = false;
 
     //########################################
 
@@ -35,10 +35,11 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
 
     protected function _prepareGrid()
     {
-        if (!$this->isGridPrepared) {
+        if (!$this->_isGridPrepared) {
             parent::_prepareGrid();
-            $this->isGridPrepared = true;
+            $this->_isGridPrepared = true;
         }
+
         return $this;
     }
 
@@ -69,13 +70,6 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
         );
         // ---------------------------------------
 
-        // we need sort by id also, because create_date may be same for some adjustment entries
-        // ---------------------------------------
-        if ($this->getRequest()->getParam('sort', 'create_date') == 'create_date') {
-            $collection->setOrder('id', $this->getRequest()->getParam('dir', 'DESC'));
-        }
-        // ---------------------------------------
-
         // Set collection to grid
         $this->setCollection($collection);
 
@@ -84,9 +78,24 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
 
     //########################################
 
+    protected function _setCollectionOrder($column)
+    {
+        // We need to sort by id to maintain the correct sequence of records
+        $collection = $this->getCollection();
+        if ($collection) {
+            $columnIndex = $column->getFilterIndex() ? $column->getFilterIndex() : $column->getIndex();
+            $collection->getSelect()->order($columnIndex . ' ' . strtoupper($column->getDir()))->order('id DESC');
+        }
+
+        return $this;
+    }
+
+    //########################################
+
     protected function _prepareColumns()
     {
-        $this->addColumn('title', array(
+        $this->addColumn(
+            'title', array(
             'header'    => Mage::helper('M2ePro')->__('Title'),
             'align'     => 'left',
             'width'     => '300px',
@@ -94,19 +103,23 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
             'escape'    => true,
             'index'     => 'title',
             'filter_index' => 'title'
-        ));
+            )
+        );
 
-        $this->addColumn('categories', array(
+        $this->addColumn(
+            'categories', array(
             'header'    => Mage::helper('M2ePro')->__('Categories'),
             'align'     => 'left',
-//            'width'     => '300px',
+            //            'width'     => '300px',
             'type'      => 'text',
             'sortable'  => false,
             'filter'    => false,
             'frame_callback' => array($this, 'callbackColumnCategories')
-        ));
+            )
+        );
 
-        $this->addColumn('action', array(
+        $this->addColumn(
+            'action', array(
             'header'    => Mage::helper('M2ePro')->__('Actions'),
             'align'     => 'left',
             'width'     => '50px',
@@ -124,7 +137,8 @@ class Ess_M2ePro_Block_Adminhtml_Listing_AutoAction_Mode_Category_Group_Grid
                 )
             ),
             'frame_callback' => array($this, 'callbackColumnActions')
-        ));
+            )
+        );
 
         return parent::_prepareColumns();
     }

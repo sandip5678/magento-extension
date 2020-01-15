@@ -1,0 +1,298 @@
+<?php
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/** @var $this Ess_M2ePro_Block_Adminhtml_Walmart_Account_Edit_Tabs_General */
+
+?>
+
+<div id="block_notice_walmart_accounts_general-" class="block_notices_module" title="<?php echo Mage::helper('M2ePro')->__('General'); ?>">
+
+    <div>
+        <?php echo Mage::helper('M2ePro')->__(
+            'Under this section, you can link your Walmart account to M2E Pro. Read how to <a href="%url%" target="_blank">get the API credentials</a>.',
+            Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(null, null, 'x/io1aAQ')
+        ); ?>
+    </div>
+
+</div>
+
+<?php
+    $formData = Mage::helper('M2ePro/Data_Global')->getValue('temp_data') ? Mage::helper('M2ePro/Data_Global')->getValue('temp_data')->toArray() : array();
+
+    if (isset($formData['other_listings_mapping_settings'])) {
+        $formData['other_listings_mapping_settings'] = (array)json_decode($formData['other_listings_mapping_settings'],true);
+    }
+
+    $defaults = array(
+        'title'           => '',
+        'marketplace_id'  => 0,
+        'consumer_id'     => '',
+        'old_private_key' => '',
+        'client_id'       => '',
+        'client_secret'   => ''
+    );
+
+    $formData = array_merge($defaults, $formData);
+
+    $isEdit = !!$this->getRequest()->getParam('id');
+
+    $licenseMessage = '';
+
+    if ($isEdit) {
+        $licenseMessage = (string)Mage::helper('M2ePro/Data_Global')->getValue('license_message');
+    }
+?>
+
+<script type="text/javascript">
+
+    // General for all tabs
+    //-----------------------------
+    M2ePro.php.setConstants(<?php echo Mage::helper('M2ePro')->getClassConstantAsJson('Ess_M2ePro_Model_Walmart_Account'); ?>, 'Ess_M2ePro_Model_Walmart_Account');
+    M2ePro.php.setConstants(<?php echo Mage::helper('M2ePro')->getClassConstantAsJson('Ess_M2ePro_Helper_Component_Walmart'); ?>, 'Ess_M2ePro_Helper_Component_Walmart');
+
+    M2ePro.url.add(<?php echo json_encode(Mage::helper('M2ePro')->getControllerActions('adminhtml_walmart_account')) ?>);
+
+    M2ePro.url.add(<?php echo json_encode(array(
+        'formSubmit' => $this->getUrl('M2ePro/adminhtml_walmart_account/save', array('id' => $this->getRequest()->getParam('id'))),
+        '*/*/delete' => $this->getUrl('M2ePro/adminhtml_walmart_account/delete'),
+        'adminhtml_walmart_account/beforeGetToken' => $this->getUrl('M2ePro/adminhtml_walmart_account/beforeGetToken', array('wizard' => (bool)$this->getRequest()->getParam('wizard', false))),
+    )); ?>);
+
+    M2ePro.translator.add(<?php echo json_encode(array(
+        'Be attentive! By Deleting Account you delete all information on it from M2E Pro Server. This will cause inappropriate work of all Accounts\' copies.' => Mage::helper('M2ePro')->__('Be attentive! By Deleting Account you delete all information on it from M2E Pro Server. This will cause inappropriate work of all Accounts\' copies.'),
+        'Please enter correct value.' => Mage::helper('M2ePro')->__('Please enter correct value.'),
+        'Coefficient is not valid.' => Mage::helper('M2ePro')->__('Coefficient is not valid.'),
+        'on_delete_account_message' => Mage::helper('M2ePro')->__('Attention! By applying this action you delete the Account data only from current M2E Pro instance. It does not affect the Subscription status and Billing process for this Channel Account. <br><br>
+                                                                   To delete Channel Account which you don\'t need to manage under M2E Pro Subscription Plan, go to the <a href="%url%" target="_blank">Clients Portal</a>.',
+                                                                   Mage::helper('M2ePro/Module_Support')->getClientsPortalUrl())
+    )); ?>);
+
+    M2ePro.formData.id = '<?php echo $this->getRequest()->getParam('id'); ?>';
+
+    Event.observe(window, 'load', function() {
+        <?php echo $licenseMessage; ?>
+
+        WalmartAccountHandlerObj = new WalmartAccountHandler();
+        editForm = new varienForm('edit_form', '<?php echo $this->getValidationUrl(); ?>');
+
+        $('marketplace_id')
+            .observe('change', WalmartAccountHandlerObj.changeMarketplace)
+            .simulate('change');
+
+        <?php if ($isEdit) : ?>
+            $('marketplace_id').disable();
+            $('consumer_id').disable();
+        <?php endif; ?>
+
+        var urlHash = location.hash.substr(1);
+        if (urlHash != '') {
+            setTimeout(function() {
+                walmartAccountEditTabsJsTabs.tabs.each(function(tab){
+                    if (tab.name == urlHash) {
+                        walmartAccountEditTabsJsTabs.showTabContent(tab);
+                    }
+                });
+                location.hash = '';
+            }, 100);
+        }
+    });
+    //-----------------------------
+
+</script>
+
+<script type="M2ePro/template" id="on_delete_account_template"><?php echo $this->getChildHtml('confirm_popup'); ?></script>
+
+<script type="text/javascript">
+
+    M2ePro.translator.add(<?php echo json_encode(array(
+        'The specified Title is already used for other Account. Account Title must be unique.' => Mage::helper('M2ePro')->__('The specified Title is already used for other Account. Account Title must be unique.'),
+        'M2E Pro was not able to get access to the Walmart Account' => Mage::helper('M2ePro')->__(
+            'M2E Pro could not get access to your Walmart account. 
+            For Walmart CA, please check if you entered valid Consumer ID and Private Key.
+            For Walmart US, please ensure to provide M2E Pro with full access permissions to all API sections and enter valid Consumer ID, Client ID, and Client Secret.'
+        ),
+        'M2E Pro was not able to get access to the Walmart Account. Reason: %error_message%' => Mage::helper('M2ePro')->__('M2E Pro was not able to get access to the Walmart Account. Reason: %error_message%'),
+        'The specified Consumer ID / Partner ID is not valid' => Mage::helper('M2ePro')->__(
+            'The specified Consumer ID / Partner ID is not valid. Please find the instruction on how to get it <a target="_blank" href="%url%">here</a>.',
+            Mage::helper('M2ePro/Module_Support')->getSupportUrl('how-to-guide/1570387-how-to-get-my-consumer-id-partner-id-to-auth-m2e-on-walmart-us')
+        )
+    )); ?>);
+
+    M2ePro.formData.title = '<?php echo Mage::helper('M2ePro')->escapeJs(Mage::helper('M2ePro')->escapeHtml($formData['title'])); ?>';
+
+</script>
+
+<div class="entry-edit" id="magento_block_walmart_accounts_general_general">
+
+    <div class="entry-edit-head">
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo Mage::helper('M2ePro')->__('General'); ?></h4>
+    </div>
+
+    <div class="fieldset">
+        <div class="hor-scroll">
+
+            <table class="form-list" cellspacing="0" cellpadding="0">
+
+                <tr>
+                    <td class="label">
+                        <label for="title"><?php echo Mage::helper('M2ePro')->__('Title'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+                        <input id="title" name="title" value="<?php echo $this->escapeHtml($formData['title']); ?>" type="text" class="input-text required-entry M2ePro-account-title" />
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Title or Identifier of Walmart Account for your internal use.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<?php if ($isEdit && !$formData['client_id'] && $formData['marketplace_id'] != Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_CA) { ?>
+    <div id="messages">
+        <ul class="messages">
+            <li class="warning-msg">
+                <ul>
+                    <li>
+                        <?php echo Mage::helper('M2ePro')->__(
+                            '<p>
+                                Attention! M2E Pro needs to be reauthorized.<br>
+                                Authentication based on the Private Key is deprecated. You need to grant M2E Pro access based on the new Walmart Access Token based Authentication.<br>
+                                To reauthorize M2E Pro, please generate <i>Client ID</i> and <i>Client Secret</i> following the instruction in the Help block above.
+                            </p>
+                            <p>Important: Your <i>Consumer ID / Partner ID</i> must not be changed once it is obtain. <i>Consumer ID / Partner ID</i> is unique seller identifier M2E Pro requires to act on your behalf.</p>'
+                        ); ?>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+<?php } ?>
+
+<div class="entry-edit" id="magento_block_walmart_accounts_marketplaces_access" collapseable="no">
+
+    <div class="entry-edit-head">
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo Mage::helper('M2ePro')->__('Access Details'); ?></h4>
+    </div>
+
+    <div class="fieldset">
+        <div class="hor-scroll">
+
+            <table class="form-list" cellspacing="0" cellpadding="0">
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Marketplace'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+
+                        <select id="marketplace_id" name="marketplace_id" class="required-entry">
+
+                            <?php if (!$isEdit) { ?>
+                                <option style="display:none;"></option>
+                            <?php } ?>
+
+                            <?php foreach ($this->marketplaces as $marketplaceRow) { ?>
+                                <option value="<?php echo $marketplaceRow['id']; ?>" <?php if ($formData['marketplace_id'] == $marketplaceRow['id']) { ?>selected="selected"<?php } ?>>
+                                    <?php echo Mage::helper('M2ePro')->__($marketplaceRow['title']); ?>
+                                </option>
+                            <?php } ?>
+
+                        </select>
+
+                        <?php if ($isEdit) : ?>
+                            <input type="hidden" name="marketplace_id" value="<?php echo $formData['marketplace_id']; ?>" />
+                        <?php endif; ?>
+
+                    </td>
+                </tr>
+
+                <?php foreach ($this->marketplaces as $marketplaceRow) { ?>
+
+                    <tr class="marketplace-required-field marketplace-required-field-id<?php echo $marketplaceRow['id']; ?>">
+                        <td class="label"></td>
+                        <td class="value">
+                            <a href="<?php echo Mage::helper('M2ePro/Component_Walmart')->getRegisterUrl($marketplaceRow['id']); ?>" target="_blank"><?php echo Mage::helper('M2ePro')->__('Get Access Data') ?></a>
+                        </td>
+                    </tr>
+
+                <?php } ?>
+
+                <tr class="marketplace-required-field marketplace-required-field-id-not-null">
+                    <td class="label">
+                        <label class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_CA; ?>"><?php echo Mage::helper('M2ePro')->__('Consumer ID'); ?>: <span class="required">*</span></label>
+                        <label class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_US; ?>"><?php echo Mage::helper('M2ePro')->__('Consumer ID / Partner ID'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+                        <input id="consumer_id" type="text" name="consumer_id" value="<?php echo $formData['consumer_id']; ?>" class="input-text required-entry M2ePro-required-when-visible" />
+                        <p class="note">
+                            <span class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_CA; ?>">
+                                <?php echo Mage::helper('M2ePro')->__('A unique seller identifier on the website.'); ?>
+                            </span>
+                            <span class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_US; ?>">
+                                <?php echo Mage::helper('M2ePro')->__(
+                                    'A unique seller identifier on the website.<br>
+                                    <b>Note:</b> You can find the instruction on how to get the Consumer ID / Partner ID <a target="_blank" href="%url%">here</a>.',
+                                    Mage::helper('M2ePro/Module_Support')->getSupportUrl('how-to-guide/1570387-how-to-get-my-consumer-id-partner-id-to-auth-m2e-on-walmart-us')
+                                ); ?>
+                            </span>
+                        </p>
+
+                        <?php if ($isEdit) : ?>
+                            <input type="hidden" name="consumer_id" value="<?php echo $formData['consumer_id']; ?>" />
+                        <?php endif; ?>
+                    </td>
+                </tr>
+
+                <tr class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_CA ?>">
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Private Key'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+                        <textarea name="old_private_key" id="old_private_key" cols="50" rows="10" class="input-text M2ePro-required-when-visible M2ePro-marketplace-merchant" style="height: 15em;"><?php echo Mage::helper('M2ePro')->escapeHtml($formData['old_private_key']); ?></textarea>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Walmart Private Key generated from your Seller Center Account.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_US ?>">
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Client ID'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+                        <input id="client_id" type="text" name="client_id" <?php if ($isEdit) echo ' value="'.$formData['client_id'].'"'; ?> class="input-text M2ePro-required-when-visible" />
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('A Client ID retrieved to get an access token.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr class="marketplace-required-field marketplace-required-field-id<?php echo Ess_M2ePro_Helper_Component_Walmart::MARKETPLACE_US ?>">
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Client Secret'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value">
+                        <textarea name="client_secret" id="client_secret" cols="50" rows="10" class="input-text M2ePro-required-when-visible M2ePro-marketplace-merchant" style="height: 5em;"><?php echo Mage::helper('M2ePro')->escapeHtml($formData['client_secret']); ?></textarea>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('A Client Secret key retrieved to get an access token.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>

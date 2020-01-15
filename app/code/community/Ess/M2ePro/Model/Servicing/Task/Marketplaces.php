@@ -2,12 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Servicing_Task_Marketplaces extends Ess_M2ePro_Model_Servicing_Task
 {
+    protected $_needToCleanCache = false;
+
     //########################################
 
     /**
@@ -37,6 +39,10 @@ class Ess_M2ePro_Model_Servicing_Task_Marketplaces extends Ess_M2ePro_Model_Serv
         if (isset($data['amazon_last_update_dates']) && is_array($data['amazon_last_update_dates'])) {
             $this->processAmazonLastUpdateDates($data['amazon_last_update_dates']);
         }
+
+        if ($this->_needToCleanCache) {
+            Mage::helper('M2ePro/Data_Cache_Permanent')->removeTagValues('marketplace');
+        }
     }
 
     //########################################
@@ -48,25 +54,40 @@ class Ess_M2ePro_Model_Servicing_Task_Marketplaces extends Ess_M2ePro_Model_Serv
             ->addFieldToFilter('status', Ess_M2ePro_Model_Marketplace::STATUS_ENABLE);
 
         $writeConn = Mage::getSingleton('core/resource')->getConnection('core_write');
-        $dictionaryTable = Mage::getSingleton('core/resource')->getTableName('m2epro_ebay_dictionary_marketplace');
+        $dictionaryTable = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_ebay_dictionary_marketplace');
 
-        /* @var $marketplace Ess_M2ePro_Model_Marketplace */
+        /** @var $marketplace Ess_M2ePro_Model_Marketplace */
         foreach ($enabledMarketplaces as $marketplace) {
-
             if (!isset($lastUpdateDates[$marketplace->getNativeId()])) {
                 continue;
             }
 
             $serverLastUpdateDate = $lastUpdateDates[$marketplace->getNativeId()];
 
-            $expr = "IF(client_details_last_update_date is NULL, '{$serverLastUpdateDate}',
-                                                                 client_details_last_update_date)";
+            $select = $writeConn->select()
+                ->from(
+                    $dictionaryTable, array(
+                    'client_details_last_update_date'
+                    )
+                )
+                ->where('marketplace_id = ?', $marketplace->getId());
+
+            $clientLastUpdateDate = $writeConn->fetchOne($select);
+
+            if ($clientLastUpdateDate === null) {
+                $clientLastUpdateDate = $serverLastUpdateDate;
+            }
+
+            if ($clientLastUpdateDate < $serverLastUpdateDate) {
+                $this->_needToCleanCache = true;
+            }
 
             $writeConn->update(
                 $dictionaryTable,
                 array(
                     'server_details_last_update_date' => $serverLastUpdateDate,
-                    'client_details_last_update_date' => new Zend_Db_Expr($expr)
+                    'client_details_last_update_date' => $clientLastUpdateDate
                 ),
                 array('marketplace_id = ?' => $marketplace->getId())
             );
@@ -79,25 +100,40 @@ class Ess_M2ePro_Model_Servicing_Task_Marketplaces extends Ess_M2ePro_Model_Serv
             ->getMarketplacesAvailableForApiCreation();
 
         $writeConn = Mage::getSingleton('core/resource')->getConnection('core_write');
-        $dictionaryTable = Mage::getSingleton('core/resource')->getTableName('m2epro_amazon_dictionary_marketplace');
+        $dictionaryTable = Mage::helper('M2ePro/Module_Database_Structure')
+            ->getTableNameWithPrefix('m2epro_amazon_dictionary_marketplace');
 
-        /* @var $marketplace Ess_M2ePro_Model_Marketplace */
+        /** @var $marketplace Ess_M2ePro_Model_Marketplace */
         foreach ($enabledMarketplaces as $marketplace) {
-
             if (!isset($lastUpdateDates[$marketplace->getNativeId()])) {
                 continue;
             }
 
             $serverLastUpdateDate = $lastUpdateDates[$marketplace->getNativeId()];
 
-            $expr = "IF(client_details_last_update_date is NULL, '{$serverLastUpdateDate}',
-                                                                 client_details_last_update_date)";
+            $select = $writeConn->select()
+                ->from(
+                    $dictionaryTable, array(
+                    'client_details_last_update_date'
+                    )
+                )
+                ->where('marketplace_id = ?', $marketplace->getId());
+
+            $clientLastUpdateDate = $writeConn->fetchOne($select);
+
+            if ($clientLastUpdateDate === null) {
+                $clientLastUpdateDate = $serverLastUpdateDate;
+            }
+
+            if ($clientLastUpdateDate < $serverLastUpdateDate) {
+                $this->_needToCleanCache = true;
+            }
 
             $writeConn->update(
                 $dictionaryTable,
                 array(
                     'server_details_last_update_date' => $serverLastUpdateDate,
-                    'client_details_last_update_date' => new Zend_Db_Expr($expr)
+                    'client_details_last_update_date' => $clientLastUpdateDate
                 ),
                 array('marketplace_id = ?' => $marketplace->getId())
             );

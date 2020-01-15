@@ -2,10 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
+/**
+ * @method Ess_M2ePro_Model_Marketplace getParentObject()
+ */
 class Ess_M2ePro_Model_Amazon_Marketplace extends Ess_M2ePro_Model_Component_Child_Amazon_Abstract
 {
     //########################################
@@ -26,7 +29,7 @@ class Ess_M2ePro_Model_Amazon_Marketplace extends Ess_M2ePro_Model_Component_Chi
      */
     public function getAmazonItems($asObjects = false, array $filters = array())
     {
-        return $this->getRelatedSimpleItems('Amazon_Item','marketplace_id',$asObjects,$filters);
+        return $this->getRelatedSimpleItems('Amazon_Item', 'marketplace_id', $asObjects, $filters);
     }
 
     /**
@@ -37,7 +40,7 @@ class Ess_M2ePro_Model_Amazon_Marketplace extends Ess_M2ePro_Model_Component_Chi
      */
     public function getDescriptionTemplates($asObjects = false, array $filters = array())
     {
-        return $this->getRelatedSimpleItems('Amazon_Template_Description','marketplace_id',$asObjects,$filters);
+        return $this->getRelatedSimpleItems('Amazon_Template_Description', 'marketplace_id', $asObjects, $filters);
     }
 
     //########################################
@@ -62,9 +65,9 @@ class Ess_M2ePro_Model_Amazon_Marketplace extends Ess_M2ePro_Model_Component_Chi
     /**
      * @return bool
      */
-    public function isAsinAvailable()
+    public function isNewAsinAvailable()
     {
-        return (bool)$this->getData('is_asin_available');
+        return (bool)$this->getData('is_new_asin_available');
     }
 
     /**
@@ -75,20 +78,36 @@ class Ess_M2ePro_Model_Amazon_Marketplace extends Ess_M2ePro_Model_Component_Chi
         return (bool)$this->getData('is_merchant_fulfillment_available');
     }
 
-    //########################################
+    /**
+     * @return bool
+     */
+    public function isBusinessAvailable()
+    {
+        return (bool)$this->getData('is_business_available');
+    }
 
     /**
      * @return bool
      */
-    public function isNewAsinAvailable()
+    public function isVatCalculationServiceAvailable()
     {
-        $newAsinNotImplementedMarketplaces = array(
-            Ess_M2ePro_Helper_Component_Amazon::MARKETPLACE_CA,
-            Ess_M2ePro_Helper_Component_Amazon::MARKETPLACE_JP,
-            Ess_M2ePro_Helper_Component_Amazon::MARKETPLACE_CN,
-        );
+        return (bool)$this->getData('is_vat_calculation_service_available');
+    }
 
-        return !in_array((int)$this->getId(),$newAsinNotImplementedMarketplaces);
+    /**
+     * @return bool
+     */
+    public function isProductTaxCodePolicyAvailable()
+    {
+        return (bool)$this->getData('is_product_tax_code_policy_available');
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAutomaticTokenRetrievingAvailable()
+    {
+        return (bool)$this->getData('is_automatic_token_retrieving_available');
     }
 
     //########################################

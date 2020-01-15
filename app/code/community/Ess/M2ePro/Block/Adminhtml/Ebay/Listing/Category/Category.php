@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -39,21 +39,25 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_Category
         // ---------------------------------------
 
         // ---------------------------------------
-        $url = $this->getUrl('*/*/',array('step' => 1, '_current' => true));
-        $this->_addButton('back', array(
+        $url = $this->getUrl('*/*/', array('step' => 1, '_current' => true));
+        $this->_addButton(
+            'back', array(
             'label'     => Mage::helper('M2ePro')->__('Back'),
             'class'     => 'back',
             'onclick'   => 'setLocation(\''.$url.'\');'
-        ));
+            )
+        );
         // ---------------------------------------
 
         // ---------------------------------------
-        $this->_addButton('next', array(
+        $this->_addButton(
+            'next', array(
             'id'        => 'ebay_listing_category_continue_btn',
             'label'     => Mage::helper('M2ePro')->__('Continue'),
             'class'     => 'scalable next',
-            'onclick'   => "EbayListingCategoryCategoryGridHandlerObj.validate()"
-        ));
+            'onclick'   => "EbayListingCategoryCategoryGridHandlerObj.completeCategoriesDataStep()"
+            )
+        );
         // ---------------------------------------
     }
 
@@ -69,11 +73,34 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_Category
             'Listing', $this->getRequest()->getParam('listing_id')
         );
         $viewHeaderBlock = $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_listing_view_header','',
+            'M2ePro/adminhtml_listing_view_header', '',
             array('listing' => $listing)
         );
 
         return $viewHeaderBlock->toHtml() . parent::getGridHtml();
+    }
+
+    protected function _toHtml()
+    {
+        $parentHtml = parent::_toHtml();
+        $popupsHtml = $this->getPopupsHtml();
+
+        return <<<HTML
+<div id="products_progress_bar"></div>
+<div id="products_container">{$parentHtml}</div>
+<div style="display: none">{$popupsHtml}</div>
+HTML;
+    }
+
+    //########################################
+
+    protected function getPopupsHtml()
+    {
+        /** @var Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_WarningPopup $block */
+        $block = $this->getLayout()->createBlock('M2ePro/adminhtml_ebay_listing_category_warningPopup');
+        $block->setCategoryGridJsHandler('EbayListingCategoryCategoryGridHandlerObj');
+
+        return $block->toHtml();
     }
 
     //########################################

@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -23,22 +23,26 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_Same_Chooser extends Ess_
 
         $this->setTemplate('M2ePro/ebay/listing/category/same/chooser.phtml');
 
-        $this->_addButton('back', array(
+        $this->_addButton(
+            'back', array(
             'label'     => Mage::helper('M2ePro')->__('Back'),
             'class'     => 'back',
             'onclick'   => 'setLocation(\'' . $this->getUrl('*/*/*', array('_current' => true, 'step' => 1)) . '\');'
-        ));
+            )
+        );
 
         $onClick = <<<JS
 EbayListingCategoryChooserHandlerObj.submitData(
     '{$this->getUrl('*/*/*', array('step' => 2,'_current' => true))}'
 );
 JS;
-        $this->_addButton('next', array(
+        $this->_addButton(
+            'next', array(
             'label'     => Mage::helper('M2ePro')->__('Continue'),
             'class'     => 'scalable next',
             'onclick'   => $onClick
-        ));
+            )
+        );
     }
 
     //########################################
@@ -59,7 +63,7 @@ JS;
             'Listing', $this->getRequest()->getParam('listing_id')
         );
         $viewHeaderBlock = $this->getLayout()->createBlock(
-            'M2ePro/adminhtml_listing_view_header','',
+            'M2ePro/adminhtml_listing_view_header', '',
             array('listing' => $listing)
         );
         $this->setChild('view_header', $viewHeaderBlock);
@@ -117,17 +121,21 @@ JS;
         );
 
         $path = 'adminhtml_ebay_listing_categorySettings';
-        $urls[$path] = $this->getUrl('*/' . $path, array(
+        $urls[$path] = $this->getUrl(
+            '*/' . $path, array(
             'step' => 3,
             '_current' => true
-        ));
+            )
+        );
 
-        $path = 'adminhtml_ebay_listing/review';
-        $urls[$path] = $this->getUrl('*/' . $path, array(
+        $path = 'adminhtml_ebay_listing_categorySettings/review';
+        $urls[$path] = $this->getUrl(
+            '*/' . $path, array(
             '_current' => true
-        ));
+            )
+        );
 
-        $urls = json_encode($urls);
+        $urls = Mage::helper('M2ePro')->jsonEncode($urls);
 
         // ---------------------------------------
 

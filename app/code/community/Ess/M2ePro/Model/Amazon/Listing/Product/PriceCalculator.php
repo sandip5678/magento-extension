@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -17,12 +17,21 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_PriceCalculator
     /**
      * @var bool
      */
-    private $isSalePrice = false;
+    protected $_isSalePrice = false;
 
-    /**
-     * @var bool
-     */
-    private $isIncreaseByVatPercent = false;
+    //########################################
+
+    protected function isPriceVariationModeParent()
+    {
+        return $this->getPriceVariationMode()
+                            == Ess_M2ePro_Model_Amazon_Template_SellingFormat::PRICE_VARIATION_MODE_PARENT;
+    }
+
+    protected function isPriceVariationModeChildren()
+    {
+        return $this->getPriceVariationMode()
+                            == Ess_M2ePro_Model_Amazon_Template_SellingFormat::PRICE_VARIATION_MODE_CHILDREN;
+    }
 
     //########################################
 
@@ -32,7 +41,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_PriceCalculator
      */
     public function setIsSalePrice($value)
     {
-        $this->isSalePrice = (bool)$value;
+        $this->_isSalePrice = (bool)$value;
         return $this;
     }
 
@@ -41,36 +50,16 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_PriceCalculator
      */
     protected function getIsSalePrice()
     {
-        return $this->isSalePrice;
-    }
-
-    //########################################
-
-    /**
-     * @param bool $value
-     * @return Ess_M2ePro_Model_Amazon_Listing_Product_PriceCalculator
-     */
-    public function setIsIncreaseByVatPercent($value)
-    {
-        $this->isIncreaseByVatPercent = (bool)$value;
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
-    protected function getIsIncreaseByVatPercent()
-    {
-        return $this->isIncreaseByVatPercent;
+        return $this->_isSalePrice;
     }
 
     //########################################
 
     protected function applyAdditionalOptionValuesModifications(
-        Ess_M2ePro_Model_Listing_Product_Variation $variation, $value)
-    {
-        if ($this->getIsSalePrice() && $value <= 0 &&
-            $this->getSource('mode') == Ess_M2ePro_Model_Template_SellingFormat::PRICE_SPECIAL) {
+        Ess_M2ePro_Model_Listing_Product_Variation $variation,
+        $value
+    ) {
+        if ($this->getIsSalePrice() && $value <= 0 && $this->isSourceModeSpecial()) {
             return 0;
         }
 
@@ -99,21 +88,9 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_PriceCalculator
 
     //########################################
 
-    protected function prepareFinalValue($value)
+    protected function getCurrencyForPriceConvert()
     {
-        if ($this->getIsIncreaseByVatPercent() &&
-            $this->getComponentSellingFormatTemplate()->getPriceVatPercent() > 0) {
-
-            $value = $this->increaseValueByVatPercent($value);
-        }
-
-        return parent::prepareFinalValue($value);
-    }
-
-    protected function increaseValueByVatPercent($value)
-    {
-        $vatPercent = $this->getComponentSellingFormatTemplate()->getPriceVatPercent();
-        return $value + (($vatPercent*$value) / 100);
+        return $this->getComponentListing()->getAmazonMarketplace()->getDefaultCurrency();
     }
 
     //########################################

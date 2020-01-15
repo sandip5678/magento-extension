@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -20,27 +20,26 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_List_Request
     protected function getActionData()
     {
         $data = array(
-            'sku'       => $this->validatorsData['sku'],
-            'type_mode' => $this->validatorsData['list_type'],
+            'sku'       => $this->_cachedData['sku'],
+            'type_mode' => $this->_cachedData['list_type'],
         );
 
-        if ($this->validatorsData['list_type'] == self::LIST_TYPE_NEW &&
+        if ($this->_cachedData['list_type'] == self::LIST_TYPE_NEW &&
             $this->getVariationManager()->isRelationMode()) {
-
-                $data = array_merge($data, $this->getRelationData());
+            $data = array_merge($data, $this->getRelationData());
         }
 
         $data = array_merge(
             $data,
-            $this->getRequestDetails()->getData(),
-            $this->getRequestImages()->getData()
+            $this->getDetailsData(),
+            $this->getImagesData()
         );
 
         if ($this->getVariationManager()->isRelationParentType()) {
             return $data;
         }
 
-        if ($this->validatorsData['list_type'] == self::LIST_TYPE_NEW) {
+        if ($this->_cachedData['list_type'] == self::LIST_TYPE_NEW) {
             $data = array_merge($data, $this->getNewProductIdentifierData());
         } else {
             $data = array_merge($data, $this->getExistProductIdentifierData());
@@ -48,9 +47,9 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_List_Request
 
         $data = array_merge(
             $data,
-            $this->getRequestQty()->getData(),
-            $this->getRequestPrice()->getData(),
-            $this->getRequestShippingOverride()->getData()
+            $this->getQtyData(),
+            $this->getRegularPriceData(),
+            $this->getBusinessPriceData()
         );
 
         return $data;
@@ -58,15 +57,15 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_List_Request
 
     //########################################
 
-    private function getExistProductIdentifierData()
+    protected function getExistProductIdentifierData()
     {
         return array(
-            'product_id' => $this->validatorsData['general_id'],
-            'product_id_type' => Mage::helper('M2ePro')->isISBN($this->validatorsData['general_id']) ? 'ISBN' : 'ASIN',
+            'product_id' => $this->_cachedData['general_id'],
+            'product_id_type' => Mage::helper('M2ePro')->isISBN($this->_cachedData['general_id']) ? 'ISBN' : 'ASIN',
         );
     }
 
-    private function getNewProductIdentifierData()
+    protected function getNewProductIdentifierData()
     {
         $data = array();
 
@@ -90,7 +89,7 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_List_Request
 
     // ---------------------------------------
 
-    private function getRelationData()
+    protected function getRelationData()
     {
         if (!$this->getVariationManager()->isRelationMode()) {
             return array();
@@ -130,18 +129,20 @@ class Ess_M2ePro_Model_Amazon_Listing_Product_Action_Type_List_Request
             $attributes[$matchedAttributes[$attribute]] = $value;
         }
 
-        $data['variation_data'] = array_merge($data['variation_data'], array(
+        $data['variation_data'] = array_merge(
+            $data['variation_data'], array(
             'parentage'  => self::PARENTAGE_CHILD,
             'parent_sku' => $parentAmazonListingProduct->getSku(),
             'attributes' => $attributes,
-        ));
+            )
+        );
 
         return $data;
     }
 
     //########################################
 
-    private function getChannelTheme()
+    protected function getChannelTheme()
     {
         if (!$this->getVariationManager()->isRelationMode()) {
             return null;

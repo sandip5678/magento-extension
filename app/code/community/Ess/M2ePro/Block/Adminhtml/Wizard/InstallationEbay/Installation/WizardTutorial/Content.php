@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -37,11 +37,13 @@ JS;
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Register and Link to eBay'),
                 'onclick' => $onClick,
                 'class'   => 'start_wizard_button'
-            ));
+                )
+            );
         $this->setChild('start_wizard_button', $buttonBlock);
 
         // ---------------------------------------

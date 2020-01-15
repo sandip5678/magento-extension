@@ -2,13 +2,13 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extends Mage_Adminhtml_Block_Widget
 {
-    private $attributeSets = array();
+    protected $_attributeSets = array();
 
     public $attributes = array();
     public $generalAttributes = array();
@@ -28,12 +28,9 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
 
         $this->setTemplate('M2ePro/ebay/template/description/form/data.phtml');
 
-        $this->attributeSets = Mage::helper('M2ePro/Data_Global')->getValue('ebay_attribute_sets');
-//        $this->attributes = Mage::helper('M2ePro/Data_Global')->getValue('ebay_attributes');
+        $this->_attributeSets = Mage::helper('M2ePro/Data_Global')->getValue('ebay_attribute_sets');
         $this->attributes = Mage::helper('M2ePro/Magento_Attribute')->getAll();
         $this->generalAttributes = Mage::helper('M2ePro/Magento_Attribute')->getGeneralFromAllAttributeSets();
-//        $this->attributesConfigurable = Mage::helper('M2ePro/Magento_Attribute')
-//            ->getAllConfigurableByAttributeSets($this->attributeSets);
         $this->attributesConfigurable = Mage::helper('M2ePro/Magento_Attribute')->getAllConfigurable();
 
         $this->M2eProAttributes = array(
@@ -46,6 +43,18 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
             'reserve_price' => Mage::helper('M2ePro')->__('Reserve Price'),
             'buyitnow_price' => Mage::helper('M2ePro')->__('Buy It Now Price'),
             'qty' => Mage::helper('M2ePro')->__('QTY'),
+            'main_image' => Mage::helper('M2ePro')->__('Base Image Url'),
+            'gallery_image[1]' => Mage::helper('M2ePro')->__('Gallery Image URL 1'),
+            'gallery_image[2]' => Mage::helper('M2ePro')->__('Gallery Image URL 2'),
+            'gallery_image[3]' => Mage::helper('M2ePro')->__('Gallery Image URL 3'),
+            'gallery_image[4]' => Mage::helper('M2ePro')->__('Gallery Image URL 4'),
+            'gallery_image[5]' => Mage::helper('M2ePro')->__('Gallery Image URL 5'),
+            'gallery_image[6]' => Mage::helper('M2ePro')->__('Gallery Image URL 6'),
+            'gallery_image[7]' => Mage::helper('M2ePro')->__('Gallery Image URL 7'),
+            'gallery_image[8]' => Mage::helper('M2ePro')->__('Gallery Image URL 8'),
+            'gallery_image[9]' => Mage::helper('M2ePro')->__('Gallery Image URL 9'),
+            'gallery_image[10]' => Mage::helper('M2ePro')->__('Gallery Image URL 10'),
+            'gallery_image[11]' => Mage::helper('M2ePro')->__('Gallery Image URL 11'),
             'listing_type' => Mage::helper('M2ePro')->__('Listing Type'),
             'listing_duration' => Mage::helper('M2ePro')->__('Listing Duration'),
             'handling_time' => Mage::helper('M2ePro')->__('Dispatch Time'),
@@ -73,92 +82,108 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => 'EbayTemplateDescriptionHandlerObj.openInsertImageWindow();',
                 'class' => 'insert_image_window_button'
-            ));
+                )
+            );
         $this->setChild('insert_image_window_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => "AttributeHandlerObj.appendToText"
                 ."('select_attributes_for_subtitle', 'subtitle_template');",
                 'class' => 'add_subtitle_button'
-            ));
+                )
+            );
         $this->setChild('add_subtitle_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label' => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => "AttributeHandlerObj.appendToText"
                 ."('select_attributes_for_title', 'title_template');",
                 'class' => 'select_attributes_for_title_button'
-            ));
+                )
+            );
         $this->setChild('select_attributes_for_title_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => "AttributeHandlerObj.appendToText"
                 ."('select_attributes_for_condition_note', 'condition_note_template');",
                 'class' => 'add_condition_note_button'
-            ));
+                )
+            );
         $this->setChild('add_condition_note_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'id' => 'toggletext',
                 'label' => Mage::helper('M2ePro')->__('Show / Hide Editor'),
                 'class' => 'show_hide_mce_button',
-            ));
+                )
+            );
         $this->setChild('show_hide_mce_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => "AttributeHandlerObj.appendToTextarea('#' + $('select_attributes').value + '#');",
                 'class'   => 'add_product_attribute_button',
-            ));
+                )
+            );
         $this->setChild('add_product_attribute_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => "AttributeHandlerObj.appendToTextarea"
                 ."('#value[' + $('select_m2epro_attributes').value + ']#');",
                 'class' => 'add_product_attribute_button',
-            ));
+                )
+            );
         $this->setChild('add_m2epro_attribute_button', $buttonBlock);
         // ---------------------------------------
 
         // ---------------------------------------
         $buttonBlock = $this->getLayout()
             ->createBlock('adminhtml/widget_button')
-            ->setData(array(
+            ->setData(
+                array(
                 'label'   => Mage::helper('M2ePro')->__('Insert'),
                 'onclick' => 'EbayTemplateDescriptionHandlerObj.insertGallery();',
                 'class' => 'insert_gallery_button',
-            ));
+                )
+            );
         $this->setChild('insert_gallery_button', $buttonBlock);
         // ---------------------------------------
 
@@ -166,11 +191,14 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
 
         $buttonBlock = $this->getLayout()
          ->createBlock('adminhtml/widget_button')
-         ->setData(array(
-            'label'   => Mage::helper('M2ePro')->__('Preview'),
-            'onclick' => 'EbayTemplateDescriptionHandlerObj.preview_click(\''.implode(',', $this->attributeSets).'\')',
-            'class' => 'bt_preview',
-         ));
+        ->setData(
+            array(
+                'label'   => Mage::helper('M2ePro')->__('Preview'),
+                'onclick' => 'EbayTemplateDescriptionHandlerObj.preview_click(\''
+                             .implode(',', $this->_attributeSets) . '\')',
+                'class' => 'bt_preview',
+            )
+        );
         $this->setChild('preview_button', $buttonBlock);
         // ---------------------------------------
 
@@ -196,7 +224,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
 
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_description');
 
-        if (is_null($template)) {
+        if ($template === null) {
             return '';
         }
 
@@ -209,7 +237,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
     {
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_description');
 
-        if (is_null($template) || is_null($template->getId())) {
+        if ($template === null || $template->getId() === null) {
             return array();
         }
 
@@ -222,28 +250,31 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
         }
 
         if (!empty($data['product_details']) && is_string($data['product_details'])) {
-            $data['product_details'] = json_decode($data['product_details'], true);
+            $data['product_details'] = Mage::helper('M2ePro')->jsonDecode($data['product_details']);
         } else {
             unset($data['product_details']);
         }
 
         if (!empty($data['variation_configurable_images']) && is_string($data['variation_configurable_images'])) {
-            $data['variation_configurable_images'] = json_decode($data['variation_configurable_images'], true);
+            $data['variation_configurable_images'] = Mage::helper('M2ePro')->jsonDecode(
+                $data['variation_configurable_images']
+            );
         } else {
             unset($data['variation_configurable_images']);
         }
 
         if (!empty($data['watermark_settings']) && is_string($data['watermark_settings'])) {
-
-            $watermarkSettings = json_decode($data['watermark_settings'], true);
+            $watermarkSettings = Mage::helper('M2ePro')->jsonDecode($data['watermark_settings']);
             unset($data['watermark_settings']);
 
             if (isset($watermarkSettings['position'])) {
                 $data['watermark_settings']['position'] = $watermarkSettings['position'];
             }
+
             if (isset($watermarkSettings['scale'])) {
                 $data['watermark_settings']['scale'] = $watermarkSettings['scale'];
             }
+
             if (isset($watermarkSettings['transparent'])) {
                 $data['watermark_settings']['transparent'] = $watermarkSettings['transparent'];
             }
@@ -251,6 +282,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
             if (isset($watermarkSettings['hashes']['current'])) {
                 $data['watermark_settings']['hashes']['current'] = $watermarkSettings['hashes']['current'];
             }
+
             if (isset($watermarkSettings['hashes']['previous'])) {
                 $data['watermark_settings']['hashes']['previous'] = $watermarkSettings['hashes']['previous'];
             }
@@ -265,14 +297,14 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Description_Edit_Form_Data extend
 
     public function getDefault()
     {
-        $default = Mage::helper('M2ePro/View_Ebay')->isSimpleMode()
-            ? Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettingsSimpleMode()
-            : Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettingsAdvancedMode();
+        $default = Mage::getSingleton('M2ePro/Ebay_Template_Description')->getDefaultSettings();
+
+        $helper = Mage::helper('M2ePro');
 
         $default['enhancement'] = explode(',', $default['enhancement']);
-        $default['product_details'] = json_decode($default['product_details'], true);
-        $default['variation_configurable_images'] = json_decode($default['variation_configurable_images'], true);
-        $default['watermark_settings'] = json_decode($default['watermark_settings'], true);
+        $default['product_details'] = $helper->jsonDecode($default['product_details']);
+        $default['variation_configurable_images'] = $helper->jsonDecode($default['variation_configurable_images']);
+        $default['watermark_settings'] = $helper->jsonDecode($default['watermark_settings']);
 
         return $default;
     }

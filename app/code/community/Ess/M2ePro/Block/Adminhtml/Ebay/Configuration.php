@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -21,7 +21,13 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Configuration extends Ess_M2ePro_Block_Adm
 
         // Set header text
         // ---------------------------------------
-        $this->_headerText = Mage::helper('M2ePro')->__('Configuration');
+        if (!Mage::helper('M2ePro/Component')->isSingleActiveComponent()) {
+            $componentName = Mage::helper('M2ePro/Component_Ebay')->getTitle();
+            $this->_headerText = Mage::helper('M2ePro')->__('%component_name% / Configuration', $componentName);
+        } else {
+            $this->_headerText = Mage::helper('M2ePro')->__('Configuration');
+        }
+
         // ---------------------------------------
 
         // Set buttons actions
@@ -51,7 +57,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Configuration extends Ess_M2ePro_Block_Adm
 
 JAVASCIRPT;
 
-        $activeTab = !is_null($this->getData('active_tab')) ? $this->getData('active_tab')
+        $activeTab = $this->getData('active_tab') !== null ? $this->getData('active_tab')
             : Ess_M2ePro_Block_Adminhtml_Ebay_Configuration_Tabs::TAB_ID_MARKETPLACE;
         $tabsBlock = $this->getLayout()->createBlock(
             'M2ePro/adminhtml_ebay_configuration_tabs', '', array('active_tab' => $activeTab)

@@ -2,13 +2,14 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
 class Ess_M2ePro_Model_Order_Log extends Ess_M2ePro_Model_Log_Abstract
 {
-    protected $initiator = NULL;
+    /** @var int|null  */
+    protected $_initiator = null;
 
     //########################################
 
@@ -26,11 +27,19 @@ class Ess_M2ePro_Model_Order_Log extends Ess_M2ePro_Model_Log_Abstract
      */
     public function setInitiator($initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN)
     {
-        $this->initiator = (int)$initiator;
+        $this->_initiator = (int)$initiator;
         return $this;
     }
 
-    // ########################################
+    /**
+     * @return int|null
+     */
+    public function getInitiator()
+    {
+        return $this->_initiator;
+    }
+
+    //########################################
 
     public function addMessage($orderId, $description, $type, array $additionalData = array())
     {
@@ -38,12 +47,14 @@ class Ess_M2ePro_Model_Order_Log extends Ess_M2ePro_Model_Log_Abstract
         $this->createMessage($dataForAdd);
     }
 
-    // ########################################
+    //########################################
 
     protected function createMessage($dataForAdd)
     {
-        $dataForAdd['initiator'] = $this->initiator ? $this->initiator : Ess_M2ePro_Helper_Data::INITIATOR_EXTENSION;
+        $dataForAdd['initiator'] = $this->_initiator ? $this->_initiator : Ess_M2ePro_Helper_Data::INITIATOR_EXTENSION;
         $dataForAdd['component_mode'] = $this->getComponentMode();
+
+        $this->isObjectNew(true);
 
         $this->setId(null)
             ->setData($dataForAdd)
@@ -52,11 +63,15 @@ class Ess_M2ePro_Model_Order_Log extends Ess_M2ePro_Model_Log_Abstract
 
     protected function makeDataForAdd($orderId, $description, $type, array $additionalData = array())
     {
+        $order = Mage::getModel('M2ePro/Order')->load($orderId);
+
         $dataForAdd = array(
+            'account_id'      => $order->getData('account_id'),
+            'marketplace_id'  => $order->getData('marketplace_id'),
             'order_id'        => $orderId,
             'description'     => $description,
             'type'            => (int)$type,
-            'additional_data' => json_encode($additionalData)
+            'additional_data' => Mage::helper('M2ePro')->jsonEncode($additionalData)
         );
 
         return $dataForAdd;

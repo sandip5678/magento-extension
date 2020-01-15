@@ -1,0 +1,298 @@
+<?php
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/** @var $this Ess_M2ePro_Block_Adminhtml_Walmart_Template_Synchronization_Edit_Tabs_Stop */
+
+?>
+
+<div id="block_notice_walmart_template_synchronization_stop" class="block_notices_module" title="<?php echo Mage::helper('M2ePro')->__('Stop Rules'); ?>">
+    <?php echo Mage::helper('M2ePro')->__(
+        'Enable the Stop Action and define the Stop Conditions based on which M2E Pro will automatically stop your Items on Walmart.<br>
+        If at least one specified Condition is met, the Item(s) will be automatically stopped on Walmart.<br><br>
+
+        <strong>Note:</strong> If none of Stop Conditions is enabled, the Stop Action will not be applied to your Item(s) on Walmart.<br><br>
+
+        The detailed information can be found <a href="%url%" target="_blank">here</a>.',
+
+        Mage::helper('M2ePro/Module_Support')->getDocumentationUrl(null, null, 'x/L4taAQ')
+    ); ?>
+</div>
+
+<?php
+    $formData = Mage::helper('M2ePro/Data_Global')->getValue('temp_data') ? Mage::helper('M2ePro/Data_Global')->getValue('temp_data')->toArray() : array();
+    $defaults = array(
+        'stop_mode' => 1,
+
+        'stop_status_disabled' => 1,
+        'stop_out_off_stock' => 1,
+
+        'stop_qty_magento'           => Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE,
+        'stop_qty_magento_value'     => '0',
+        'stop_qty_magento_value_max' => '10',
+
+        'stop_qty_calculated'           => Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE,
+        'stop_qty_calculated_value'     => '0',
+        'stop_qty_calculated_value_max' => '10',
+
+        'stop_advanced_rules_mode' => 0,
+    );
+    $formData = array_merge($defaults, $formData);
+
+    $isEdit = !!$this->getRequest()->getParam('id');
+?>
+
+<script type="text/javascript">
+
+    M2ePro.formData.stop_mode = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_mode']); ?>';
+
+    M2ePro.formData.stop_status_disabled = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_status_disabled']); ?>';
+    M2ePro.formData.stop_out_off_stock = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_out_off_stock']); ?>';
+
+    M2ePro.formData.stop_qty_magento = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_magento']); ?>';
+    M2ePro.formData.stop_qty_magento_value = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_magento_value']); ?>';
+    M2ePro.formData.stop_qty_magento_value_max = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_magento_value_max']); ?>';
+
+    M2ePro.formData.stop_qty_calculated = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_calculated']); ?>';
+    M2ePro.formData.stop_qty_calculated_value = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_calculated_value']); ?>';
+    M2ePro.formData.stop_qty_calculated_value_max = '<?php echo Mage::helper('M2ePro')->escapeJs($formData['stop_qty_calculated_value_max']); ?>';
+
+    Event.observe(window, 'load', function() {
+        $('stop_mode')
+            .observe('change', WalmartTemplateSynchronizationHandlerObj.stopMode_change)
+            .simulate('change');
+
+        $('stop_qty_magento').observe('change', WalmartTemplateSynchronizationHandlerObj.stopQty_change);
+        $('stop_qty_calculated').observe('change', WalmartTemplateSynchronizationHandlerObj.stopQty_change);
+
+        $('stop_advanced_rules_mode')
+            .observe('change', WalmartTemplateSynchronizationHandlerObj.stopAdvancedRules_change)
+            .simulate('change');
+    });
+
+</script>
+
+<div class="entry-edit" id="magento_block_walmart_template_synchronization_stop_filters">
+
+    <div class="entry-edit-head">
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo Mage::helper('M2ePro')->__('General'); ?></h4>
+    </div>
+
+    <div class="fieldset">
+        <div class="hor-scroll">
+
+            <table class="form-list" cellspacing="0" cellpadding="0">
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Stop Action'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_mode" name="stop_mode" class="required-entry">
+                            <option value="0" <?php if ($formData['stop_mode'] == 0): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Disabled'); ?></option>
+                            <option value="1" <?php if ($formData['stop_mode'] == 1): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Enabled'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Enable to automatically stop the Item(s) when the Stop Conditions are met.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="entry-edit" id="magento_block_walmart_template_synchronization_stop_rules">
+
+    <div class="entry-edit-head">
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo Mage::helper('M2ePro')->__('Stop Conditions'); ?></h4>
+    </div>
+
+    <div class="fieldset">
+        <div class="hor-scroll">
+
+            <table class="form-list" cellspacing="0" cellpadding="0">
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Stop When Status Disabled'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_status_disabled" name="stop_status_disabled" class="required-entry">
+                            <option value="0" <?php if ($formData['stop_status_disabled'] == 0): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('No'); ?></option>
+                            <option value="1" <?php if ($formData['stop_status_disabled'] == 1): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Yes'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Automatically stops the Items on Walmart when their Magento status is changed to Disabled.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Stop When Out Of Stock'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_out_off_stock" name="stop_out_off_stock" class="required-entry">
+                            <option value="0" <?php if ($formData['stop_out_off_stock'] == 0): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('No'); ?></option>
+                            <option value="1" <?php if ($formData['stop_out_off_stock'] == 1): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Yes'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Automatically stops the Items on Walmart when their Magento Stock Availability is changed to Out Of Stock.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Stop When Magento Quantity Is'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_qty_magento" name="stop_qty_magento" class="required-entry" qty_type="magento">
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE; ?>" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('No Action'); ?></option>
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_LESS; ?>" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_LESS): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Less or Equal'); ?></option>
+                            <!-- <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_MORE; ?>" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_MORE): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('More'); ?></option> -->
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN; ?>" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Between'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Automatically stops the Items on Walmart when their Magento Quantity reaches the specified value.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr id="stop_qty_magento_value_container" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE) echo ' style="display: none;"'; ?>>
+                    <td class="label">
+                        <label for="stop_qty_magento_value">
+                            <span id="stop_qty_magento_item" <?php if ($formData['stop_qty_magento'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>><?php echo Mage::helper('M2ePro')->__('Quantity'); ?>: <span class="required">*</span></span>
+                            <span id="stop_qty_magento_item_min" <?php if ($formData['stop_qty_magento'] != Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>><?php echo Mage::helper('M2ePro')->__('Min Quantity'); ?>: <span class="required">*</span></span>
+                        </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <input id="stop_qty_magento_value" name="stop_qty_magento_value" value="<?php echo $this->escapeHtml($formData['stop_qty_magento_value']); ?>" type="text" class="M2ePro-required-when-visible input-text validate-digits" />
+                    </td>
+                </tr>
+
+                <tr id="stop_qty_magento_value_max_container" <?php if ($formData['stop_qty_magento'] != Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>>
+                    <td class="label">
+                        <label for="stop_qty_magento_value_max"><?php echo Mage::helper('M2ePro')->__('Max Quantity'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <input id="stop_qty_magento_value_max" name="stop_qty_magento_value_max" value="<?php echo $this->escapeHtml($formData['stop_qty_magento_value_max']); ?>" type="text" class="M2ePro-required-when-visible input-text validate-digits M2ePro-validate-conditions-between" />
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Stop When Calculated Quantity Is'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_qty_calculated" name="stop_qty_calculated" class="required-entry" qty_type="calculated">
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE; ?>" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('No Action'); ?></option>
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_LESS; ?>" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_LESS): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Less or Equal'); ?></option>
+                            <!-- <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_MORE; ?>" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_MORE): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('More'); ?></option> -->
+                            <option value="<?php echo Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN; ?>" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Between'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__('Automatically stops the Items on Walmart when their Quantity calculated based on the Selling Policy settings reaches the specified value.'); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr id="stop_qty_calculated_value_container" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_NONE) echo ' style="display: none;"'; ?>>
+                    <td class="label">
+                        <label for="stop_qty_calculated_value">
+                            <span id="stop_qty_calculated_item" <?php if ($formData['stop_qty_calculated'] == Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>><?php echo Mage::helper('M2ePro')->__('Quantity'); ?>: <span class="required">*</span></span>
+                            <span id="stop_qty_calculated_item_min" <?php if ($formData['stop_qty_calculated'] != Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>><?php echo Mage::helper('M2ePro')->__('Min Quantity'); ?>: <span class="required">*</span></span>
+                        </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <input id="stop_qty_calculated_value" name="stop_qty_calculated_value" value="<?php echo $this->escapeHtml($formData['stop_qty_calculated_value']); ?>" type="text" class="M2ePro-required-when-visible input-text validate-digits" />
+                    </td>
+                </tr>
+
+                <tr id="stop_qty_calculated_value_max_container" <?php if ($formData['stop_qty_calculated'] != Ess_M2ePro_Model_Template_Synchronization::QTY_MODE_BETWEEN) echo ' style="display: none;"'; ?>>
+                    <td class="label">
+                        <label for="stop_qty_calculated_value_max"><?php echo Mage::helper('M2ePro')->__('Max Quantity'); ?>: <span class="required">*</span></label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <input id="stop_qty_calculated_value_max" name="stop_qty_calculated_value_max" value="<?php echo $this->escapeHtml($formData['stop_qty_calculated_value_max']); ?>" type="text" class="M2ePro-required-when-visible input-text validate-digits M2ePro-validate-conditions-between" />
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="entry-edit" id="magento_block_walmart_template_synchronization_stop_advanced">
+
+    <div class="entry-edit-head">
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo Mage::helper('M2ePro')->__('Advanced Conditions'); ?></h4>
+    </div>
+
+    <div class="fieldset">
+        <div class="hor-scroll">
+
+            <div id="stop_advanced_rules_filters_warning">
+                <ul class="messages">
+                    <li class="warning-msg">
+                        <ul>
+                            <li>
+                                <?php echo Mage::helper('M2ePro')->__(
+                                    'Please be very thoughtful before enabling this option as this functionality
+                                    can have a negative impact on the Performance of your system.<br> It can decrease the speed
+                                    of running in case you have a lot of Products with the high number of changes made to them.'
+                                ); ?>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <table class="form-list" cellspacing="0" cellpadding="0">
+
+                <tr>
+                    <td class="label">
+                        <label for="stop_advanced_rules_mode"><?php echo Mage::helper('M2ePro')->__('Enabled'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <select id="stop_advanced_rules_mode" name="stop_advanced_rules_mode" class="required-entry">
+                            <option value="0" <?php if ($formData['stop_advanced_rules_mode'] == 0): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('No'); ?></option>
+                            <option value="1" <?php if ($formData['stop_advanced_rules_mode'] == 1): echo ' selected="selected"'; endif; ?>><?php echo Mage::helper('M2ePro')->__('Yes'); ?></option>
+                        </select>
+                        <p class="note">
+                            <span><?php echo Mage::helper('M2ePro')->__(
+                                'You can provide flexible Advanced Conditions to manage when the Stop action should
+                                be run basing on the Attributes’ values of the Magento Product.<br> So, when at least
+                                one of the Conditions (both general Stop Conditions and Advanced Conditions) is met,
+                                the Product will be stopped on Channel.'
+                            ); ?></span>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr id="stop_advanced_rules_filters_container">
+                    <td class="label">
+                        <label><?php echo Mage::helper('M2ePro')->__('Conditions'); ?>: </label>
+                    </td>
+                    <td class="value" style="width: auto;">
+                        <?php echo $this->getAdvancedRulesBlock()->toHtml(); ?>
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>

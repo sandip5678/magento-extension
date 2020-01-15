@@ -1,12 +1,23 @@
 <?php
-    $internalData = !is_null($this->getInternalData()) ? $this->getInternalData() : array();
-    $selectCallback = $this->getSelectCallback();
-    $unselectCallback = $this->getUnselectCallback();
-    $attributes = $this->getAttributes();
-    $isInterfaceModeFull = $this->isInterfaceModeFull();
-    $isSingleCategoryMode = $this->isSingleCategoryMode();
-    $singleCategoryType = $this->getSingleCategoryType();
-    $isShowEditLinks = $this->isShowEditLinks();
+/*
+ * @author     M2E Pro Developers Team
+ * @copyright  M2E LTD
+ * @license    Commercial use is forbidden
+ */
+
+// @codingStandardsIgnoreFile
+
+/** @var $this Ess_M2ePro_Block_Adminhtml_Ebay_Listing_Category_Chooser */
+
+$internalData = $this->getInternalData() !== null ? $this->getInternalData() : array();
+$selectCallback = $this->getSelectCallback();
+$unselectCallback = $this->getUnselectCallback();
+$attributes = $this->getAttributes();
+$isInterfaceModeFull = $this->isInterfaceModeFull();
+$isSingleCategoryMode = $this->isSingleCategoryMode();
+$singleCategoryType = $this->getSingleCategoryType();
+$isShowEditLinks = $this->isShowEditLinks();
+
 ?>
 
 <?php if (!$this->_isAjax): ?>
@@ -95,7 +106,7 @@
                                           && $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_MAIN]['mode'] != Ess_M2ePro_Model_Ebay_Template_Category::CATEGORY_MODE_NONE): ?>
                                     <?php echo $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_MAIN]['path']; ?>
                                 <?php else: ?>
-                                    <span style="font-style: italic; color: grey"><?php echo Mage::helper('M2ePro')->__('Not Selected'); ?></span>
+                                    <span style="font-style: italic; color: grey" id="magento_block_ebay_listing_category_chooser_main_primary_not_selected"><?php echo Mage::helper('M2ePro')->__('Not Selected'); ?></span>
                                     <?php if (isset($internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_MAIN]['message'])): ?>
                                         <div class="validation-advice default-value-message"><?php echo $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_MAIN]['message']; ?></div>
                                     <?php endif; ?>
@@ -124,7 +135,7 @@
                                     && $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_SECONDARY]['mode'] != Ess_M2ePro_Model_Ebay_Template_Category::CATEGORY_MODE_NONE): ?>
                                     <?php echo $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_SECONDARY]['path']; ?>
                                 <?php else: ?>
-                                    <span style="font-style: italic; color: grey"><?php echo Mage::helper('M2ePro')->__('Not Selected'); ?></span>
+                                    <span style="font-style: italic; color: grey" id="magento_block_ebay_listing_category_chooser_main_secondary_not_selected"><?php echo Mage::helper('M2ePro')->__('Not Selected'); ?></span>
                                     <?php if (isset($internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_SECONDARY]['message'])): ?>
                                         <div class="validation-advice default-value-message"><?php echo $internalData[Ess_M2ePro_Helper_Component_Ebay_Category::TYPE_EBAY_SECONDARY]['message']; ?></div>
                                     <?php endif; ?>

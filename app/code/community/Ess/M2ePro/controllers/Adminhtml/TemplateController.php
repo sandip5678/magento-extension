@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -12,7 +12,7 @@ class Ess_M2ePro_Adminhtml_TemplateController extends Ess_M2ePro_Controller_Admi
 
     protected function getCustomViewNick()
     {
-        return NULL;
+        return null;
     }
 
     //########################################
@@ -27,7 +27,7 @@ class Ess_M2ePro_Adminhtml_TemplateController extends Ess_M2ePro_Controller_Admi
         // ---------------------------------------
 
         // ---------------------------------------
-        $template = NULL;
+        $template = null;
         $templateData = $data ? $data : array();
         $templateUsedAttributes = array();
         // ---------------------------------------
@@ -47,18 +47,20 @@ class Ess_M2ePro_Adminhtml_TemplateController extends Ess_M2ePro_Controller_Admi
                 }
                 break;
         }
+
         // ---------------------------------------
 
-        if (!is_null($template) && $template->getId()) {
+        if ($template !== null && $template->getId()) {
             $templateData = $template->getData();
             $templateUsedAttributes = $template->getUsedAttributes();
         }
 
         // ---------------------------------------
-        if (is_null($template) && empty($templateData)) {
-            $this->getResponse()->setBody(json_encode(array('messages' => '')));
+        if ($template === null && empty($templateData)) {
+            $this->getResponse()->setBody(Mage::helper('M2ePro')->jsonEncode(array('messages' => '')));
             return;
         }
+
         // ---------------------------------------
 
         $this->loadLayout();
@@ -73,7 +75,11 @@ class Ess_M2ePro_Adminhtml_TemplateController extends Ess_M2ePro_Controller_Admi
         $messagesBlock->setData('marketplace_id', $this->getRequest()->getParam('marketplace_id'));
         $messagesBlock->setData('store_id', $this->getRequest()->getParam('store_id'));
 
-        $this->getResponse()->setBody(json_encode(array('messages' => $messagesBlock->getMessagesHtml())));
+        $this->getResponse()->setBody(
+            Mage::helper('M2ePro')->jsonEncode(
+                array('messages' => $messagesBlock->getMessagesHtml())
+            )
+        );
     }
 
     //########################################

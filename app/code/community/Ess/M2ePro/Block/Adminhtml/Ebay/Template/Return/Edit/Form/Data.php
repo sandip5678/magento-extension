@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -41,7 +41,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
 
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_return');
 
-        if (is_null($template)) {
+        if ($template === null) {
             return '';
         }
 
@@ -52,7 +52,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
     {
         $template = Mage::helper('M2ePro/Data_Global')->getValue('ebay_template_return');
 
-        if (is_null($template) || is_null($template->getId())) {
+        if ($template === null || $template->getId() === null) {
             return array();
         }
 
@@ -63,11 +63,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
 
     public function getDefault()
     {
-        if (Mage::helper('M2ePro/View_Ebay')->isSimpleMode()) {
-            return Mage::getSingleton('M2ePro/Ebay_Template_Return')->getDefaultSettingsSimpleMode();
-        }
-
-        return Mage::getSingleton('M2ePro/Ebay_Template_Return')->getDefaultSettingsAdvancedMode();
+        return Mage::getSingleton('M2ePro/Ebay_Template_Return')->getDefaultSettings();
     }
 
     public function getMarketplaceData()
@@ -84,24 +80,51 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
         );
 
         $policyLocalization = $this->getData('policy_localization');
+        $translator = Mage::helper('M2ePro');
 
         if (!empty($policyLocalization)) {
             /** @var Ess_M2ePro_Model_Magento_Translate $translator */
             $translator = Mage::getModel('M2ePro/Magento_Translate');
             $translator->setLocale($policyLocalization);
             $translator->init();
+        }
 
-            foreach ($data['info']['returns_within'] as $key => $item) {
-                $data['info']['returns_within'][$key]['title'] = $translator->__($item['title']);
-            }
+        foreach ($this->getDictionaryInfo('returns_within', $marketplace) as $key => $item) {
+            $data['info']['returns_within'][$key]['title'] = $translator->__($item['title']);
+        }
 
-            foreach ($data['info']['returns_accepted'] as $key => $item) {
-                $data['info']['returns_accepted'][$key]['title'] = $translator->__($item['title']);
-            }
+        foreach ($this->getDictionaryInfo('returns_accepted', $marketplace) as $key => $item) {
+            $data['info']['returns_accepted'][$key]['title'] = $translator->__($item['title']);
+        }
 
-            foreach ($data['info']['shipping_cost_paid_by'] as $key => $item) {
-                $data['info']['shipping_cost_paid_by'][$key]['title'] = $translator->__($item['title']);
-            }
+        foreach ($this->getDictionaryInfo('refund', $marketplace) as $key => $item) {
+            $data['info']['refund'][$key]['title'] = $translator->__($item['title']);
+        }
+
+        foreach ($this->getDictionaryInfo('shipping_cost_paid_by', $marketplace) as $key => $item) {
+            $data['info']['shipping_cost_paid_by'][$key]['title'] = $translator->__($item['title']);
+        }
+
+        // ---------------------------------------
+
+        foreach ($this->getInternationalDictionaryInfo('returns_within', $marketplace) as $key => $item) {
+            $data['info']['international_returns_within'][$key]['ebay_id'] = $item['ebay_id'];
+            $data['info']['international_returns_within'][$key]['title'] = $translator->__($item['title']);
+        }
+
+        foreach ($this->getInternationalDictionaryInfo('returns_accepted', $marketplace) as $key => $item) {
+            $data['info']['international_returns_accepted'][$key]['ebay_id'] = $item['ebay_id'];
+            $data['info']['international_returns_accepted'][$key]['title'] = $translator->__($item['title']);
+        }
+
+        foreach ($this->getInternationalDictionaryInfo('refund', $marketplace) as $key => $item) {
+            $data['info']['international_refund'][$key]['ebay_id'] = $item['ebay_id'];
+            $data['info']['international_refund'][$key]['title'] = $translator->__($item['title']);
+        }
+
+        foreach ($this->getInternationalDictionaryInfo('shipping_cost_paid_by', $marketplace)as $key => $item) {
+            $data['info']['international_shipping_cost_paid_by'][$key]['ebay_id'] = $item['ebay_id'];
+            $data['info']['international_shipping_cost_paid_by'][$key]['title'] = $translator->__($item['title']);
         }
 
         return $data;
@@ -109,7 +132,7 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
 
     //########################################
 
-    public function canShowHolidayReturnOption()
+    public function canShowGeneralBlock()
     {
         $marketplace = Mage::helper('M2ePro/Data_Global')->getValue('ebay_marketplace');
 
@@ -117,7 +140,26 @@ class Ess_M2ePro_Block_Adminhtml_Ebay_Template_Return_Edit_Form_Data extends Mag
             throw new Ess_M2ePro_Model_Exception_Logic('Marketplace is required for editing Return Policy.');
         }
 
-        return $marketplace->getChildObject()->isHolidayReturnEnabled();
+        return $marketplace->getChildObject()->isReturnDescriptionEnabled();
+    }
+
+    //########################################
+
+    protected function getDictionaryInfo($key, Ess_M2ePro_Model_Marketplace $marketplace)
+    {
+        $returnPolicyInfo = $marketplace->getChildObject()->getReturnPolicyInfo();
+        return !empty($returnPolicyInfo[$key]) ? $returnPolicyInfo[$key] : array();
+    }
+
+    protected function getInternationalDictionaryInfo($key, Ess_M2ePro_Model_Marketplace $marketplace)
+    {
+        $returnPolicyInfo = $marketplace->getChildObject()->getReturnPolicyInfo();
+
+        if (!empty($returnPolicyInfo['international_'.$key])) {
+            return $returnPolicyInfo['international_'.$key];
+        }
+
+        return $this->getDictionaryInfo($key, $marketplace);
     }
 
     //########################################

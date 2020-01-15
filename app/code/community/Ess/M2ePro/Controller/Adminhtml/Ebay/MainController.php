@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -35,7 +35,7 @@ abstract class Ess_M2ePro_Controller_Adminhtml_Ebay_MainController
 
     //########################################
 
-    protected function setComponentPageHelpLink($view = NULL)
+    protected function setComponentPageHelpLink($view = null)
     {
         $this->setPageHelpLink(Ess_M2ePro_Helper_Component_Ebay::NICK, $view);
     }

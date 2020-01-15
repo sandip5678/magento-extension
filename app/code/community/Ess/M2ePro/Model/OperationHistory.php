@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -13,7 +13,7 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
     /**
      * @var Ess_M2ePro_Model_OperationHistory
      */
-    private $object = NULL;
+    protected $_object = null;
 
     //########################################
 
@@ -28,10 +28,10 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
     public function setObject($value)
     {
         if (is_object($value)) {
-            $this->object = $value;
+            $this->_object = $value;
         } else {
-            $this->object = Mage::getModel('M2ePro/OperationHistory')->load($value);
-            !$this->object->getId() && $this->object = NULL;
+            $this->_object = Mage::getModel('M2ePro/OperationHistory')->load($value);
+            !$this->_object->getId() && $this->_object = null;
         }
 
         return $this;
@@ -42,32 +42,68 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
      */
     public function getObject()
     {
-        return $this->object;
+        return $this->_object;
     }
 
     //########################################
 
-    public function start($nick, $parentId = NULL, $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN)
+    /**
+     * @param $nick string
+     * @return Ess_M2ePro_Model_OperationHistory
+     */
+    public function getParentObject($nick = null)
     {
+        if ($this->getObject()->getData('parent_id') === null) {
+            return null;
+        }
+
+        $parentId     = (int)$this->getObject()->getData('parent_id');
+        $parentObject = Mage::getModel('M2ePro/OperationHistory')->load($parentId);
+
+        if ($nick === null) {
+            return $parentObject;
+        }
+
+        while ($parentObject->getData('nick') != $nick) {
+            $parentId = $parentObject->getData('parent_id');
+            if ($parentId === null) {
+                return null;
+            }
+
+            $parentObject = Mage::getModel('M2ePro/OperationHistory')->load($parentId);
+        }
+
+        return $parentObject;
+    }
+
+    //########################################
+
+    public function start(
+        $nick,
+        $parentId = null,
+        $initiator = Ess_M2ePro_Helper_Data::INITIATOR_UNKNOWN,
+        $data = array()
+    ) {
         $data = array(
-            'nick' => $nick,
-            'parent_id' => $parentId,
-            'initiator' => $initiator,
+            'nick'       => $nick,
+            'parent_id'  => $parentId,
+            'data'       => Mage::helper('M2ePro')->jsonEncode($data),
+            'initiator'  => $initiator,
             'start_date' => Mage::helper('M2ePro')->getCurrentGmtDate()
         );
 
-        $this->object = Mage::getModel('M2ePro/OperationHistory')->setData($data)->save();
+        $this->_object = Mage::getModel('M2ePro/OperationHistory')->setData($data)->save();
 
         return true;
     }
 
     public function stop()
     {
-        if (is_null($this->object) || $this->object->getData('end_date')) {
+        if ($this->_object === null || $this->_object->getData('end_date')) {
             return false;
         }
 
-        $this->object->setData('end_date',Mage::helper('M2ePro')->getCurrentGmtDate())->save();
+        $this->_object->setData('end_date', Mage::helper('M2ePro')->getCurrentGmtDate())->save();
 
         return true;
     }
@@ -76,38 +112,51 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
 
     public function setContentData($key, $value)
     {
-        if (is_null($this->object)) {
+        if ($this->_object === null) {
             return false;
         }
 
         $data = array();
-        if ($this->object->getData('data') != '') {
-            $data = json_decode($this->object->getData('data'),true);
+        if ($this->_object->getData('data') != '') {
+            $data = Mage::helper('M2ePro')->jsonDecode($this->_object->getData('data'));
         }
 
         $data[$key] = $value;
-        $this->object->setData('data',json_encode($data))->save();
+        $this->_object->setData('data', Mage::helper('M2ePro')->jsonEncode($data))->save();
 
         return true;
     }
 
+    public function addContentData($key, $value)
+    {
+        $existedData = $this->getContentData($key);
+
+        if ($existedData === null) {
+            is_array($value) ? $existedData = array($value) : $existedData = $value;
+            return $this->setContentData($key, $existedData);
+        }
+
+        is_array($existedData) ? $existedData[] = $value : $existedData .= $value;
+        return $this->setContentData($key, $existedData);
+    }
+
     public function getContentData($key)
     {
-        if (is_null($this->object)) {
-            return NULL;
+        if ($this->_object === null) {
+            return null;
         }
 
-        if ($this->object->getData('data') == '') {
-            return NULL;
+        if ($this->_object->getData('data') == '') {
+            return null;
         }
 
-        $data = json_decode($this->object->getData('data'),true);
+        $data = Mage::helper('M2ePro')->jsonDecode($this->_object->getData('data'));
 
         if (isset($data[$key])) {
             return $data[$key];
         }
 
-        return NULL;
+        return null;
     }
 
     //########################################
@@ -119,52 +168,52 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
 
         Mage::getSingleton('core/resource')->getConnection('core_write')
                 ->delete(
-                    Mage::getSingleton('core/resource')->getTableName('m2epro_operation_history'),
+                    Mage::helper('M2ePro/Module_Database_Structure')
+                        ->getTableNameWithPrefix('m2epro_operation_history'),
                     array(
                         '`create_date` <= ?' => $minDate->format('Y-m-d H:i:s')
                     )
-            );
+                );
     }
 
     public function makeShutdownFunction()
     {
-        if (is_null($this->object)) {
+        if ($this->_object === null) {
             return false;
         }
 
-        $functionCode =
-            '$object = Mage::getModel(\'M2ePro/OperationHistory\');
-             $object->setObject('.$this->object->getId().');
-
-             if (!$object->stop()) {
+        $objectId = $this->_object->getId();
+        register_shutdown_function(
+            function() use ($objectId)
+            {
+            $error = error_get_last();
+            if ($error === null || !in_array((int)$error['type'], array(E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR))) {
                 return;
-             }
+            }
 
-             $collection = $object->getCollection()
-                     ->addFieldToFilter(\'parent_id\', '.$this->object->getId().');
+            $object = Mage::getModel('M2ePro/OperationHistory');
+            $object->setObject($objectId);
 
-             if ($collection->getSize()) {
+            if (!$object->stop()) {
                 return;
-             }
+            }
 
-             $error = error_get_last();
+            $collection = $object->getCollection()->addFieldToFilter('parent_id', $objectId);
+            if ($collection->getSize()) {
+                return;
+            }
 
-             if (is_null($error)) {
-                 return;
-             }
-
-             if (in_array((int)$error[\'type\'], array(E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR))) {
-                 $stackTrace = @debug_backtrace(false);
-                 $object->setContentData(\'fatal_error\',array(
-                    \'message\' => $error[\'message\'],
-                    \'file\' => $error[\'file\'],
-                    \'line\' => $error[\'line\'],
-                    \'trace\' => Mage::helper(\'M2ePro/Module_Exception\')->getFatalStackTraceInfo($stackTrace)
-                 ));
-             }';
-
-        $shutdownDeleteFunction = create_function('', $functionCode);
-        register_shutdown_function($shutdownDeleteFunction);
+            $stackTrace = @debug_backtrace(false);
+            $object->setContentData(
+                'fatal_error', array(
+                'message' => $error['message'],
+                'file'    => $error['file'],
+                'line'    => $error['line'],
+                'trace'   => Mage::helper('M2ePro/Module_Exception')->getFatalStackTraceInfo($stackTrace)
+                )
+            );
+            }
+        );
 
         return true;
     }
@@ -173,16 +222,16 @@ class Ess_M2ePro_Model_OperationHistory extends Ess_M2ePro_Model_Abstract
 
     public function getDataInfo($nestingLevel = 0)
     {
-        if (is_null($this->object)) {
-            return NULL;
+        if ($this->_object === null) {
+            return null;
         }
 
         $offset = str_repeat(' ', $nestingLevel * 7);
-        $separationLine = str_repeat('#',80 - strlen($offset));
+        $separationLine = str_repeat('#', 80 - strlen($offset));
 
         $nick = strtoupper($this->getObject()->getData('nick'));
 
-        $contentData = (array)json_decode($this->getObject()->getData('data'),true);
+        $contentData = (array)Mage::helper('M2ePro')->jsonDecode($this->getObject()->getData('data'));
         $contentData = preg_replace('/^/m', "{$offset}", print_r($contentData, true));
 
         return <<<INFO
@@ -200,8 +249,8 @@ INFO;
 
     public function getFullDataInfo($nestingLevel = 0)
     {
-        if (is_null($this->object)) {
-            return NULL;
+        if ($this->_object === null) {
+            return null;
         }
 
         $dataInfo = $this->getDataInfo($nestingLevel);
@@ -213,7 +262,6 @@ INFO;
         $childObjects->getSize() > 0 && $nestingLevel++;
 
         foreach ($childObjects as $item) {
-
             $object = Mage::getModel('M2ePro/OperationHistory');
             $object->setObject($item);
 
@@ -221,6 +269,76 @@ INFO;
         }
 
         return $dataInfo;
+    }
+
+    // ---------------------------------------
+
+    public function getExecutionInfo($nestingLevel = 0)
+    {
+        if ($this->_object === null) {
+            return null;
+        }
+
+        $offset = str_repeat(' ', $nestingLevel * 5);
+
+        return <<<INFO
+{$offset}<b>{$this->getObject()->getData('nick')} ## {$this->getObject()->getData('id')}</b>
+{$offset}start date: {$this->getObject()->getData('start_date')}
+{$offset}end date:   {$this->getObject()->getData('end_date')}
+{$offset}total time: {$this->getTotalTime()}
+<br>
+INFO;
+    }
+
+    public function getExecutionTreeUpInfo()
+    {
+        if ($this->_object === null) {
+            return null;
+        }
+
+        $extraParent = $this->getObject();
+        $executionTree[] = $extraParent;
+
+        while ($parentId = $extraParent->getData('parent_id')) {
+            $extraParent = Mage::getModel('M2ePro/OperationHistory')->load($parentId);
+            $executionTree[] = $extraParent;
+        }
+
+        $info = '';
+        $executionTree = array_reverse($executionTree);
+
+        foreach ($executionTree as $nestingLevel => $item) {
+            $object = Mage::getModel('M2ePro/OperationHistory');
+            $object->setObject($item);
+
+            $info .= $object->getExecutionInfo($nestingLevel);
+        }
+
+        return $info;
+    }
+
+    public function getExecutionTreeDownInfo($nestingLevel = 0)
+    {
+        if ($this->_object === null) {
+            return null;
+        }
+
+        $info = $this->getExecutionInfo($nestingLevel);
+
+        $childObjects = $this->getCollection()
+            ->addFieldToFilter('parent_id', $this->getObject()->getId())
+            ->setOrder('start_date', 'ASC');
+
+        $childObjects->getSize() > 0 && $nestingLevel++;
+
+        foreach ($childObjects as $item) {
+            $object = Mage::getModel('M2ePro/OperationHistory');
+            $object->setObject($item);
+
+            $info .= $object->getExecutionTreeDownInfo($nestingLevel);
+        }
+
+        return $info;
     }
 
     // ---------------------------------------

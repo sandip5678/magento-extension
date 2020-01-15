@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -10,60 +10,72 @@ class Ess_M2ePro_Helper_Module_Logger extends Mage_Core_Helper_Abstract
 {
     //########################################
 
-    public function process($logData, $type = NULL, $sendToServer = true)
+    public function process($logData, $type = null, $sendToServer = true)
     {
         try {
+            $info  = $this->getLogMessage($logData, $type);
+            $info .= $this->getStackTraceInfo();
+            $info .= $this->getCurrentUserActionInfo();
 
-            $this->log($logData, $type);
+            $this->log($info, $type);
 
             if (!$sendToServer || !(bool)(int)Mage::helper('M2ePro/Module')->getConfig()
                                                   ->getGroupValue('/debug/logging/', 'send_to_server')) {
                 return;
             }
 
-            $type = is_null($type) ? 'undefined' : $type;
+            $type = $type === null ? 'undefined' : $type;
+            $info .= Mage::helper('M2ePro/Module_Support_Form')->getSummaryInfo();
 
-            $logData = $this->prepareLogMessage($logData, $type);
-            $logData .= $this->getCurrentUserActionInfo();
-            $logData .= Mage::helper('M2ePro/Module_Support_Form')->getSummaryInfo();
-
-            $this->send($logData, $type);
-
-        } catch (Exception $exceptionTemp) {}
+            $this->send($info, $type);
+        } catch (Exception $exceptionTemp) {
+        }
     }
 
     //########################################
 
-    private function prepareLogMessage($logData, $type)
-    {
-        !is_string($logData) && $logData = print_r($logData, true);
-
-        $logData = '[DATE] '.date('Y-m-d H:i:s',(int)gmdate('U')).PHP_EOL.
-                   '[TYPE] '.$type.PHP_EOL.
-                   '[MESSAGE] '.$logData.PHP_EOL.
-                   str_repeat('#',80).PHP_EOL.PHP_EOL;
-
-        return $logData;
-    }
-
-    private function log($logData, $type)
+    protected function log($info, $type)
     {
         /** @var Ess_M2ePro_Model_Log_System $log */
         $log = Mage::getModel('M2ePro/Log_System');
 
-        $log->setType(is_null($type) ? 'Logging' : "{$type} Logging");
-        $log->setDescription(is_string($logData) ? $logData : print_r($logData, true));
+        $log->setType($type === null ? 'Logging' : "{$type} Logging");
+        $log->setDescription($info);
 
         $log->save();
     }
 
     //########################################
 
-    private function getCurrentUserActionInfo()
+    protected function getLogMessage($logData, $type)
     {
-        $server = isset($_SERVER) ? print_r($_SERVER, true) : '';
-        $get = isset($_GET) ? print_r($_GET, true) : '';
-        $post = isset($_POST) ? print_r($_POST, true) : '';
+        !is_string($logData) && $logData = print_r($logData, true);
+
+        $logData = '[DATE] '.date('Y-m-d H:i:s', (int)gmdate('U')).PHP_EOL.
+                   '[TYPE] '.$type.PHP_EOL.
+                   '[MESSAGE] '.$logData.PHP_EOL.
+                   str_repeat('#', 80).PHP_EOL.PHP_EOL;
+
+        return $logData;
+    }
+
+    protected function getStackTraceInfo()
+    {
+        $exception = new Exception('');
+        $stackTraceInfo = <<<TRACE
+-------------------------------- STACK TRACE INFO --------------------------------
+{$exception->getTraceAsString()}
+
+TRACE;
+
+        return $stackTraceInfo;
+    }
+
+    protected function getCurrentUserActionInfo()
+    {
+        $server = print_r(Mage::app()->getRequest()->getServer(), true);
+        $get = print_r(Mage::app()->getRequest()->getQuery(), true);
+        $post = print_r(Mage::app()->getRequest()->getPost(), true);
 
         $actionInfo = <<<ACTION
 -------------------------------- ACTION INFO -------------------------------------
@@ -78,12 +90,14 @@ ACTION;
 
     //########################################
 
-    private function send($logData, $type)
+    protected function send($logData, $type)
     {
-        $dispatcherObject = Mage::getModel('M2ePro/Connector_M2ePro_Dispatcher');
-        $connectorObj = $dispatcherObject->getVirtualConnector('logger', 'add', 'entity',
-                                                               array('info' => $logData,
-                                                                     'type' => $type));
+        $dispatcherObject = Mage::getModel('M2ePro/M2ePro_Connector_Dispatcher');
+        $connectorObj = $dispatcherObject->getVirtualConnector(
+            'logger', 'add', 'entity',
+            array('info' => $logData,
+            'type' => $type)
+        );
         $dispatcherObject->process($connectorObj);
     }
 

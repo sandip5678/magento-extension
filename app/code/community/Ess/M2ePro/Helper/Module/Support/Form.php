@@ -2,7 +2,7 @@
 
 /*
  * @author     M2E Pro Developers Team
- * @copyright  2011-2015 ESS-UA [M2E Pro]
+ * @copyright  M2E LTD
  * @license    Commercial use is forbidden
  */
 
@@ -36,7 +36,7 @@ class Ess_M2ePro_Helper_Module_Support_Form extends Mage_Core_Helper_Abstract
 
         $toEmail = Mage::helper('M2ePro/Module_Support')->getContactEmail();
         $componentTitle = Mage::helper('M2ePro/Component')->getComponentTitle($component);
-        $body = $this->createBody($subject,$componentTitle,$description,$severity);
+        $body = $this->createBody($subject, $componentTitle, $description, $severity);
 
         $this->sendMailNow($toEmail, $fromEmail, $fromName, $subject, $body, $attachments);
     }
@@ -62,8 +62,9 @@ class Ess_M2ePro_Helper_Module_Support_Form extends Mage_Core_Helper_Abstract
         $phpInfo = Mage::helper('M2ePro/Client')->getPhpSettings();
         $phpInfo['api'] = Mage::helper('M2ePro/Client')->getPhpApiName();
         $phpInfo['version'] = Mage::helper('M2ePro/Client')->getPhpVersion();
+        $phpInfo['ini_file_location'] = Mage::helper('M2ePro/Client')->getPhpIniFileLoaded();
 
-        $mysqlInfo = Mage::Helper('M2ePro/Client')->getMysqlSettings();
+        $mysqlInfo = Mage::helper('M2ePro/Client')->getMysqlSettings();
         $mysqlInfo['api'] = Mage::helper('M2ePro/Client')->getMysqlApiName();
         $prefix = Mage::helper('M2ePro/Magento')->getDatabaseTablesPrefix();
         $mysqlInfo['prefix'] = $prefix != '' ? $prefix : 'Disabled';
@@ -101,6 +102,7 @@ Version: {$phpInfo['version']}
 Api: {$phpInfo['api']}
 Memory Limit: {$phpInfo['memory_limit']}
 Max Execution Time: {$phpInfo['max_execution_time']}
+PHP ini file: {$phpInfo['ini_file_location']}
 
 -------------------------------- MYSQL INFO --------------------------------------
 Version: {$mysqlInfo['version']}
@@ -123,7 +125,7 @@ DATA;
 
     //########################################
 
-    private function createBody($subject, $component, $description, $severity)
+    protected function createBody($subject, $component, $description, $severity)
     {
         $currentDate = Mage::helper('M2ePro')->getCurrentGmtDate();
 
@@ -148,7 +150,7 @@ DATA;
         return $body;
     }
 
-    private function sendMailNow($toEmail, $fromEmail, $fromName, $subject, $body, array $attachments = array())
+    protected function sendMailNow($toEmail, $fromEmail, $fromName, $subject, $body, array $attachments = array())
     {
         $mail = new Zend_Mail('UTF-8');
 
